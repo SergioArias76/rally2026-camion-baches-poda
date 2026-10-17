@@ -4,6 +4,12 @@ Equipo: Sergio, Yael, Agustín e Ignacio · Sede Trelew · Desafío 02 · El cam
 
 Tres celulares viejos sin batería en el camión de la basura sacan una foto cada 2,5 m. Al volver a la base las suben por Wi-Fi a un servidor, que las analiza con IA (RF-DETR) y arma el mapa de baches y de poda en las dos veredas.
 
+## Ver el visor 3D online
+
+- **Tour guiado (el del QR del video):** https://sergioarias76.github.io/rally2026-camion-baches-poda/?tour
+- **Con bienvenida:** https://sergioarias76.github.io/rally2026-camion-baches-poda/
+- **QR:** `qr/qr_visor_tour.png`
+
 ## Qué hay en esta carpeta
 
 | Archivo o carpeta | Para qué sirve |
