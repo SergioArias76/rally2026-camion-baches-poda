@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camión: baches y poda 3D</title>
+<style>
+  :root{
+    --ink:#1d2329; --muted:#5b6670; --card:rgba(255,255,255,.93); --line:#d5dde3;
+    --accent:#1f6feb; --warn:#d98a00; --bad:#d64545; --ok:#2e9e5b; --yellow:#f2c230;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#cfe3ef;color:var(--ink);
+    font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  #app{position:fixed;inset:0}
+  #ov{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+  #labels{position:fixed;inset:0;pointer-events:none}
+  .lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;background:var(--card);
+    border:1px solid var(--line);border-radius:6px;padding:3px 7px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .lbl b{font-weight:600}
+  .lbl.det{border-color:var(--yellow);background:#fff8dc}
+  .lbl.ok{border-color:var(--ok);background:#e9f7ef}
+  .lbl.bad{border-color:var(--bad);background:#fdecec}
+  .lbl.zone{background:rgba(242,194,48,.9);border-color:#d4a514;font-size:11px;padding:2px 6px}
+  .lbl.big{font-size:13px;max-width:260px;white-space:normal;padding:6px 9px}
+  .lbl.big small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+  header{position:fixed;top:12px;left:12px;right:12px;display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  header h1{font-size:15px;margin:0 6px 0 0}
+  header .sim{font-size:12px;color:var(--muted)}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .sep{width:1px;height:22px;background:var(--line)}
+  button{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;cursor:pointer;color:var(--ink)}
+  button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  #day{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
+  aside{position:fixed;top:118px;right:12px;width:320px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;max-height:calc(100% - 130px);overflow:auto}
+  aside h2{font-size:12px;margin:10px 0 4px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  aside h2:first-child{margin-top:0}
+  #chart{width:100%;height:120px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .legend{font-size:12px;color:var(--muted);display:flex;gap:10px;margin-top:3px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:4px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .stat{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff}
+  .stat div{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;color:var(--muted)}
+  #log{list-style:none;margin:0;padding:0;font-size:12px;max-height:200px;overflow:auto}
+  #log li{padding:3px 0;border-bottom:1px solid var(--line)}
+  #log li em{font-style:normal;color:var(--muted)}
+  #miniwrap{position:fixed;left:12px;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  #miniwrap h2{font-size:12px;margin:0 0 4px;color:var(--muted);font-weight:600}
+  #mini{display:block;width:340px;height:116px}
+  #pips{position:fixed;left:12px;top:118px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  .pip{width:340px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+  .pip .ph{height:28px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);background:var(--card);display:flex;justify-content:space-between;gap:8px}
+  .pip .ph b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pip .pimg{margin:0 6px 6px;height:184px}
+  #server{position:fixed;left:12px;top:118px;width:440px;max-height:calc(100% - 300px);overflow:auto;background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
+  #server h2{font-size:15px;margin:0 0 8px}
+  #server .row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+  #server .row b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .bar{height:8px;background:#e6ebef;border-radius:4px;overflow:hidden;margin:2px 0 8px}
+  .bar i{display:block;height:100%;width:0;background:var(--accent)}
+  #thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+  #thumbs figure{margin:0;font-size:11px;color:var(--muted);line-height:1.25}
+  #thumbs canvas{width:100%;aspect-ratio:16/9;display:block;border-radius:4px;background:#ccd}
+  #srvSum{font-size:13px;margin:8px 0 0;font-weight:600}
+  .note{font-size:11px;color:var(--muted);margin:6px 0 0}
+  #info{position:fixed;left:12px;top:118px;width:360px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
+  #info h2{font-size:15px;margin:0 0 6px}
+  #info p{margin:0 0 8px;color:var(--muted)}
+  #info table{width:100%;border-collapse:collapse;font-size:13px}
+  #info td{border-top:1px solid var(--line);padding:4px 2px;vertical-align:top}
+  #info td:last-child{text-align:right;color:var(--muted)}
+  #sensChart{width:100%;height:130px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:8px}
+  #help{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+  #toast{position:fixed;left:50%;top:126px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
+  body.clean header,body.clean aside,body.clean #miniwrap,body.clean #info,body.clean #help{display:none!important}
+  body.clean #pips,body.clean #server{top:12px}
+  @media (max-height:780px){#pipS{display:none}}
+  @media (max-width:900px){aside{display:none}#info{width:auto;right:12px}#mini{width:260px}.pip{width:260px}.pip .pimg{height:139px}#server{width:auto;right:12px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="pips">
+  <div class="pip" id="pipF"><div class="ph"><span>Celular adelante · baches · 1920×1080</span><b id="cntF">foto 0</b></div><div class="pimg"></div></div>
+  <div class="pip" id="pipS"><div class="ph"><span>Celular costado · poda · 1280×720</span><b id="cntS">foto 0</b></div><div class="pimg"></div></div>
+</div>
+<canvas id="ov"></canvas>
+<div id="labels"></div>
+
+<header>
+  <h1>Camión que ve baches y poda · Trelew</h1>
+  <div class="btns">
+    <button data-mode="ruta" class="on">1 · Recorrido</button>
+    <button data-mode="kit">2 · Kit</button>
+    <button data-mode="sensores">3 · Sensores</button>
+  </div>
+  <span class="sep"></span>
+  <div class="btns" id="rutaBtns">
+    <button data-view="seguir" class="on">Seguir camión</button>
+    <button data-view="front">Cámara adelante</button>
+    <button data-view="side">Cámara costado</button>
+    <button data-view="aerea">Vista aérea</button>
+    <button id="pip" class="on">Ventanas</button>
+    <button id="ai">Vista previa IA</button>
+    <button id="pause">Pausa</button>
+    <button id="speed">1x</button>
+    <button id="csv">Datos (CSV)</button>
+  </div>
+  <div class="btns" id="kitBtns" style="display:none">
+    <button id="explode">Armar</button>
+    <button id="loadGlb">Cargar modelo 3D (.glb)</button>
+    <input type="file" id="glbFile" accept=".glb,.gltf" hidden>
+  </div>
+  <span class="sim">Simulación ilustrativa, datos no reales</span>
+  <span id="day">Día 1 de 4</span>
+</header>
+
+<aside id="panel">
+  <h2>Acelerómetro · 100 lecturas/s</h2>
+  <canvas id="chart"></canvas>
+  <div class="legend"><span><i style="background:#1f6feb"></i>Z: golpes de baches y compactadora</span><span><i style="background:#d64545"></i>X: frenado y arranque</span></div>
+  <h2>Resultado</h2>
+  <div class="stats">
+    <div class="stat"><div id="sFot">0</div><span>fotos hoy (2 celulares)</span></div>
+    <div class="stat"><div id="sBac">0</div><span>baches pendientes</span></div>
+    <div class="stat"><div id="sPod">0</div><span>poda y residuos pendientes</span></div>
+    <div class="stat"><div id="sRes">–</div><span>resueltos · demora promedio</span></div>
+  </div>
+  <h2>Registro</h2>
+  <ul id="log"></ul>
+</aside>
+
+<div id="miniwrap"><h2>Mapa del recorrido</h2><canvas id="mini"></canvas></div>
+<div id="server"></div>
+<div id="info"></div>
+<div id="toast"></div>
+<div id="help">Arrastrar: girar · Rueda: zoom · Clic derecho: mover · H: ocultar paneles · P: ventanas · I: vista previa IA · Espacio: pausa</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+"use strict";
+// =====================================================================
+// Base: renderer, escena, luces
+// =====================================================================
+const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false; // se actualiza una vez por cuadro, no en cada vista
+document.getElementById("app").appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+function gradientTex(top, bottom) {
+  const c = document.createElement("canvas"); c.width = 2; c.height = 256;
+  const g = c.getContext("2d"), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, top); gr.addColorStop(1, bottom);
+  g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
+  return new THREE.CanvasTexture(c);
+}
+const SKY = gradientTex("#7fb2dc", "#e4eef2"), STUDIO = gradientTex("#f4f6f8", "#dfe5ea");
+scene.background = SKY;
+const FOG = new THREE.Fog(0xdde8ee, 90, 230);
+scene.fog = FOG;
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.05, 800);
+camera.layers.enable(1);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.49;
+
+scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x9c8a6a, 0.8));
+const sun = new THREE.DirectionalLight(0xfff3df, 0.85);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, {left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160});
+sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+
+// utilidades
+let seed = 11;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+const matCache = new Map();
+function M(c, o = {}) {
+  const key = c + JSON.stringify(o);
+  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial(Object.assign({color: c, roughness: .85}, o)));
+  return matCache.get(key);
+}
+function box(w, h, d, mat, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m;
+}
+function cyl(rt, rb, h, mat, seg = 14) { return new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); }
+function rrect(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+function extrude(shape, depth, bevel = .02) {
+  const g = new THREE.ExtrudeGeometry(shape, {depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 8});
+  g.center(); return g;
+}
+function textTex(w, h, draw) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+const smooth = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const coma = n => String(n).replace(".", ",");
+
+// =====================================================================
+// Etiquetas HTML que siguen objetos 3D
+// =====================================================================
+const labelLayer = document.getElementById("labels");
+const labels = [];
+function makeLabel(html, cls = "") {
+  const el = document.createElement("div");
+  el.className = "lbl " + cls; el.innerHTML = html;
+  labelLayer.appendChild(el);
+  const l = {el, obj: null, offset: new THREE.Vector3(), visible: true, pos: null};
+  labels.push(l); return l;
+}
+const tmpV = new THREE.Vector3();
+function isShown(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
+function updateLabels(cam) {
+  for (const l of labels) {
+    let show = l.visible;
+    if (show) {
+      if (l.obj) { l.obj.getWorldPosition(tmpV); show = isShown(l.obj); } else tmpV.copy(l.pos);
+      tmpV.add(l.offset).project(cam);
+      if (tmpV.z > 1 || Math.abs(tmpV.x) > 1.1 || Math.abs(tmpV.y) > 1.1) show = false;
+    }
+    l.el.style.display = show ? "block" : "none";
+    if (show) {
+      l.el.style.left = ((tmpV.x + 1) / 2 * innerWidth) + "px";
+      l.el.style.top = ((1 - tmpV.y) / 2 * innerHeight) + "px";
+    }
+  }
+}
+
+// =====================================================================
+// Pantallas de los celulares
+// =====================================================================
+const screenCanvas = document.createElement("canvas");
+screenCanvas.width = 512; screenCanvas.height = 256;
+const screenTex = new THREE.CanvasTexture(screenCanvas);
+function drawScreen(t, fotos, lat, lon) {
+  const g = screenCanvas.getContext("2d"), W = 512, H = 256;
+  g.fillStyle = "#0e1726"; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#16233a"; g.fillRect(0, 0, W, 46);
+  g.fillStyle = "#fff"; g.font = "600 24px system-ui"; g.fillText("Captura · sin IA", 16, 31);
+  g.fillStyle = Math.floor(t * 2) % 2 ? "#ff4d4d" : "#7a2a2a";
+  g.beginPath(); g.arc(W - 70, 23, 9, 0, 7); g.fill();
+  g.fillStyle = "#ffb3b3"; g.font = "600 18px system-ui"; g.fillText("REC", W - 55, 29);
+  g.font = "18px system-ui";
+  const rows = [["GPS", `${lat}, ${lon}`, "#7ee2a8"], ["Disparo", "1 foto cada 2,5 m", "#cfd8e3"], ["Fotos hoy", String(fotos), "#f2c230"], ["IA", "en el servidor de la base", "#cfd8e3"]];
+  rows.forEach(([k, v, c], i) => {
+    g.fillStyle = "#8ea0b5"; g.fillText(k, 16, 82 + i * 40);
+    g.fillStyle = c; g.fillText(v, 170, 82 + i * 40);
+  });
+  screenTex.needsUpdate = true;
+}
+drawScreen(0, 0, "-43.24890", "-65.31000");
+const portraitTex = textTex(256, 512, (g, w, h) => {
+  g.fillStyle = "#0e1726"; g.fillRect(0, 0, w, h);
+  g.fillStyle = "#16233a"; g.fillRect(0, 0, w, 64);
+  g.fillStyle = "#fff"; g.font = "600 24px system-ui"; g.fillText("Sensores", 20, 42);
+  [["Acelerómetro", "#d64545"], ["Giroscopio", "#2e9e5b"], ["Magnetómetro", "#1f6feb"], ["GPS", "#7ee2a8"], ["Cámara", "#f2c230"]].forEach(([k, c], i) => {
+    g.fillStyle = c; g.beginPath(); g.arc(30, 110 + i * 70, 9, 0, 7); g.fill();
+    g.fillStyle = "#cfd8e3"; g.font = "20px system-ui"; g.fillText(k, 52, 117 + i * 70);
+    g.fillStyle = "#24324a"; g.fillRect(52, 130 + i * 70, 170, 6);
+    g.fillStyle = c; g.fillRect(52, 130 + i * 70, 60 + i * 22, 6);
+  });
+});
+
+function makePhone(w, h, d, landscape) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(extrude(rrect(w, h, w * .14), d, .02), M(0x1b1c1f, {roughness: .4, metalness: .3})));
+  const scr = new THREE.Mesh(landscape ? new THREE.PlaneGeometry(h * .92, w * .86) : new THREE.PlaneGeometry(w * .86, h * .92),
+    new THREE.MeshBasicMaterial({map: landscape ? screenTex : portraitTex, toneMapped: false}));
+  if (landscape) scr.rotation.z = -Math.PI / 2;
+  scr.position.z = d / 2 + .026;
+  g.add(scr);
+  const bump = new THREE.Mesh(extrude(rrect(w * .42, w * .42, w * .08), d * .3, .01), M(0x2a2b30, {roughness: .3, metalness: .4}));
+  bump.position.set(-w * .2, h * .32, -d / 2 - .03); g.add(bump);
+  for (const [dx, dy] of [[-.07, .07], [.07, .07], [-.07, -.07]]) {
+    const lens = cyl(w * .07, w * .07, .04, M(0x0b0b0d, {roughness: .1, metalness: .6}), 20);
+    lens.rotation.x = Math.PI / 2; lens.position.set(-w * .2 + dx * w * 1.4, h * .32 + dy * w * 1.4, -d / 2 - .06); g.add(lens);
+  }
+  g.add(box(.02, h * .12, d * .5, M(0x3a3b40), w / 2 + .02, h * .2, 0));
+  g.add(box(.02, h * .2, d * .5, M(0x3a3b40), w / 2 + .02, -h * .02, 0));
+  return g;
+}
+
+// =====================================================================
+// Ciudad
+// =====================================================================
+const city = new THREE.Group();
+scene.add(city);
+const ROAD_Z = 1.8;          // carril del camión
+const INTERS = [-37, 30];    // esquinas
+const DEPOT_X = 100;         // base municipal
+const STOP_XS = [-56, 18, 52];        // contenedores donde el camión carga
+const SIDE_XS = [-46, -15, 8, 40, 64]; // montones en la vereda
+const nearInter = (x, m) => INTERS.some(ix => Math.abs(x - ix) < m);
+
+const ground = box(520, .1, 360, M(0xa8936a), 0, -.06, 0); city.add(ground);
+const street = box(260, .02, 8, M(0x4d5156, {roughness: .95}), 0, 0, 0); city.add(street);
+for (let x = -120; x < 120; x += 5) if (!nearInter(x, 5)) city.add(box(2.4, .03, .16, M(0xeeeee6), x, .02, 0));
+// veredas y cordones por tramos entre esquinas
+const cuts = [-125, ...INTERS.flatMap(ix => [ix - 4.5, ix + 4.5]), 125];
+for (let i = 0; i < cuts.length; i += 2) {
+  const a = cuts[i], b = cuts[i + 1], len = b - a, mid = (a + b) / 2;
+  for (const s of [1, -1]) {
+    city.add(box(len, .22, 3, M(0xaeaa9e), mid, .11, s * 5.5));
+    city.add(box(len, .26, .25, M(0x9d9b94), mid, .13, s * 4.1));
+  }
+}
+for (const ix of INTERS) {
+  city.add(box(8, .021, 360, M(0x4d5156, {roughness: .95}), ix, 0, 0));
+  for (const s of [1, -1]) for (let k = 0; k < 6; k++) city.add(box(.5, .03, 2.6, M(0xf3f3ee), ix - 3 + k * 1.2, .025, s * 5.4));
+}
+// casas con techo a cuatro aguas, ventanas, puerta y medianera baja
+const wallCols = [0xeadcc4, 0xd9c4a3, 0xc8d4da, 0xe6c9b6, 0xdcdfc8, 0xcfd9c9, 0xf0e6d6];
+const roofCols = [0x8c5a46, 0x6f6f72, 0x9b6b4f, 0x5d6a74];
+const roofGeo = new THREE.ConeGeometry(1, 1, 4); roofGeo.rotateY(Math.PI / 4);
+for (let x = -112; x < 84; x += 9.5) {
+  for (const s of [1, -1]) {
+    if (nearInter(x, 8)) continue;
+    const w = 6.2 + rnd() * 1.6, h = 2.9 + rnd() * 1.2, d = 6, g = new THREE.Group();
+    g.add(box(w, h, d, M(wallCols[Math.floor(rnd() * wallCols.length)]), 0, h / 2, 0));
+    const roof = new THREE.Mesh(roofGeo, M(roofCols[Math.floor(rnd() * roofCols.length)]));
+    roof.scale.set((w + .8) / 1.414, 1.4 + rnd() * .5, (d + .8) / 1.414); roof.position.y = h + roof.scale.y / 2; g.add(roof);
+    const front = -s * (d / 2 + .02);
+    g.add(box(1, 2.1, .06, M(0x6b4f3a), -w / 4, 1.05, front));
+    for (const wx of [w / 6, w / 2.6]) {
+      g.add(box(1.1, 1, .06, M(0x9cc7e0, {roughness: .15, metalness: .2}), wx, 1.8, front));
+      g.add(box(1.3, .1, .1, M(0xf5f5f0), wx, 1.25, front));
+    }
+    g.add(box(w + 1.5, 1, .2, M(0xe9e5dc), 0, .5, -s * 4.1));
+    g.add(box(1.2, .9, .08, M(0x4b4f55), -w / 4, .55, -s * 4.12));
+    g.position.set(x + rnd() * 1.5, 0, s * 11.6);
+    city.add(g);
+  }
+}
+// álamos y árboles redondos sobre la vereda (sin tapar los montones)
+for (let x = -110; x < 84; x += 7.5) {
+  for (const s of [1, -1]) {
+    if (nearInter(x, 6) || (s === 1 && (rnd() > .35 || [...SIDE_XS, ...STOP_XS].some(px => Math.abs(px - x) < 6)))) continue;
+    const t = new THREE.Group(), alamo = s === -1 && rnd() > .4;
+    const tr = cyl(.12, .18, alamo ? 2.2 : 1.8, M(0x6b4f3a)); tr.position.y = alamo ? 1.1 : .9; t.add(tr);
+    if (alamo) { const c = new THREE.Mesh(new THREE.ConeGeometry(.9, 6.5, 9), M(0x4f7a3f)); c.position.y = 4.8; t.add(c); }
+    else { const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4, 1), M(0x6b9a4e, {flatShading: true})); c.position.y = 2.8; t.add(c); }
+    t.position.set(x + rnd() * 2, .22, s * 6.7);
+    city.add(t);
+  }
+}
+// faroles
+for (let x = -105; x < 84; x += 21) {
+  if (nearInter(x, 6)) continue;
+  const p = new THREE.Group();
+  p.add(cyl(.07, .1, 6, M(0x5d6166, {metalness: .5, roughness: .5})).translateY(3));
+  p.add(box(1.4, .08, .08, M(0x5d6166), -.7, 5.95, 0));
+  p.add(box(.5, .14, .3, M(0xf6f0d0, {emissive: 0x403a20}), -1.35, 5.85, 0));
+  p.rotation.y = Math.PI / 2;
+  p.position.set(x, .22, 4.4);
+  city.add(p);
+}
+// postes de madera con cables (vereda de enfrente)
+const poleXs = [];
+for (let x = -110; x < 84; x += 22) {
+  const px = nearInter(x, 6) ? x + 8 : x;
+  const p = new THREE.Group();
+  p.add(cyl(.12, .16, 8, M(0x7a5c3e)).translateY(4));
+  p.add(box(.12, .12, 2, M(0x7a5c3e), 0, 7.6, 0));
+  p.position.set(px, .22, -6.9);
+  city.add(p); poleXs.push(px);
+}
+for (const dz of [-.9, 0, .9]) {
+  const pts = [];
+  for (let i = 0; i < poleXs.length - 1; i++) for (let k = 0; k <= 8; k++) {
+    const p = V3(poleXs[i], 7.85, -6.9 + dz).lerp(V3(poleXs[i + 1], 7.85, -6.9 + dz), k / 8);
+    p.y -= Math.sin(k / 8 * Math.PI) * .6; pts.push(p);
+  }
+  city.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color: 0x2b2b2b})));
+}
+// autos estacionados del lado de enfrente
+const carCols = [0xc0392b, 0x2c3e50, 0xecf0f1, 0x7f8c8d, 0x2980b9, 0xd4ac0d];
+function makeCar(col) {
+  const g = new THREE.Group(), paint = M(col, {roughness: .4, metalness: .3});
+  g.add(box(4.2, .7, 1.8, paint, 0, .65, 0));
+  g.add(box(2.3, .6, 1.6, paint, -.2, 1.25, 0));
+  g.add(box(2.1, .5, 1.62, M(0x2b3a4a, {roughness: .1, metalness: .4}), -.2, 1.25, 0));
+  for (const z of [-.6, .6]) { g.add(box(.05, .15, .3, M(0xfff6d8, {emissive: 0x554f3a}), 2.11, .75, z)); g.add(box(.05, .15, .3, M(0xb02020), -2.11, .75, z)); }
+  const wg = new THREE.CylinderGeometry(.35, .35, .25, 16); wg.rotateX(Math.PI / 2);
+  for (const x of [-1.35, 1.35]) for (const z of [-.85, .85]) { const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(x, .35, z); g.add(w); }
+  return g;
+}
+for (let x = -100; x < 80; x += 13 + rnd() * 10) {
+  if (nearInter(x, 7)) continue;
+  const c = makeCar(carCols[Math.floor(rnd() * carCols.length)]);
+  c.position.set(x, 0, -2.9); if (rnd() > .5) c.rotation.y = Math.PI; city.add(c);
+}
+// contenedores verdes: ahí carga el camión su recorrido normal
+for (const x of STOP_XS) {
+  const c = new THREE.Group();
+  c.add(box(1.5, 1.2, 1, M(0x2f7d4f), 0, .6, 0));
+  c.add(box(1.6, .12, 1.1, M(0x245f3c), 0, 1.25, 0));
+  const wg = new THREE.CylinderGeometry(.12, .12, .1, 10); wg.rotateX(Math.PI / 2);
+  for (const dx of [-.55, .55]) { const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(dx, .1, .5); c.add(w); }
+  c.position.set(x, .22, 6.2); city.add(c);
+}
+// mesetas en el horizonte
+for (let i = 0; i < 9; i++) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(22 + rnd() * 18, 34 + rnd() * 18, 8 + rnd() * 7, 7), M(0xb39a74, {flatShading: true}));
+  const s = i % 2 ? 1 : -1;
+  m.scale.z = .45; m.position.set(-180 + i * 48 + rnd() * 20, 3, s * (120 + rnd() * 30));
+  m.userData.noShadow = true; city.add(m);
+}
+// base municipal con antena Wi-Fi y servidor
+const depot = new THREE.Group();
+depot.position.set(DEPOT_X, 0, 0);
+city.add(depot);
+for (let x = -12; x <= 12; x += 2) for (const z of [-11, 11]) depot.add(box(.08, 2, .08, M(0x8a8f94), x, 1, z));
+for (const z of [-11, 11]) for (const y of [.4, 1.9]) depot.add(box(24, .05, .05, M(0x8a8f94), 0, y, z));
+for (let z = -11; z <= 11; z += 2) depot.add(box(.08, 2, .08, M(0x8a8f94), 12, 1, z));
+depot.add(box(24, .03, 22, M(0x8d8676, {roughness: 1}), 0, .01, 0));
+const shed = new THREE.Group();
+shed.add(box(9, 4.5, 7, M(0xd7d9db), 0, 2.25, 0));
+shed.add(box(9.6, .3, 7.6, M(0x7b8288), 0, 4.6, 0));
+shed.add(box(.06, 3.4, 4, M(0x5b6670), -4.52, 1.7, 0));
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.1), new THREE.MeshBasicMaterial({map: textTex(512, 96, (g, w, h) => {
+  g.fillStyle = "#1d2329"; g.fillRect(0, 0, w, h); g.fillStyle = "#fff"; g.font = "600 44px system-ui"; g.textAlign = "center"; g.fillText("BASE MUNICIPAL", w / 2, 62);
+})}));
+sign.position.set(-4.56, 3.9, 0); sign.rotation.y = -Math.PI / 2; shed.add(sign);
+shed.position.set(4, 0, -6.5);
+depot.add(shed);
+// servidor: mesa con una mini PC y un disco, a la vista en la puerta del galpón
+const server = new THREE.Group();
+server.add(box(1.6, .08, .9, M(0x9b7b55), 0, 1.0, 0));
+for (const dx of [-.7, .7]) for (const dz of [-.35, .35]) server.add(box(.06, 1, .06, M(0x5d6166), dx, .5, dz));
+server.add(box(.7, .3, .5, M(0xd64545, {roughness: .5}), -.3, 1.19, 0));
+server.add(box(.7, .05, .5, M(0xf3f3ee), -.3, 1.36, 0));
+server.add(box(.5, .12, .35, M(0x6d737a, {metalness: .4}), .45, 1.1, 0));
+const srvLed = box(.06, .06, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x000000}), -.05, 1.2, .26);
+server.add(srvLed);
+server.position.set(-1.6, 0, -2.2);
+depot.add(server);
+const antenna = new THREE.Group();
+antenna.add(cyl(.06, .08, 6, M(0x9aa0a6, {metalness: .6, roughness: .4})).translateY(3));
+antenna.add(box(.3, .5, .15, M(0xf2f2f2), 0, 6.1, 0));
+antenna.position.set(-2, 0, -6);
+depot.add(antenna);
+const wifiRings = [];
+for (let i = 0; i < 3; i++) {
+  const r = new THREE.Mesh(new THREE.TorusGeometry(1, .05, 6, 40, Math.PI / 2), new THREE.MeshBasicMaterial({color: 0x1f6feb, transparent: true, opacity: 0}));
+  r.rotation.z = Math.PI / 4; r.position.set(-2, 6.4, -6); depot.add(r); wifiRings.push(r);
+}
+const serverLabel = makeLabel("<b>Servidor de la base</b><small>Mini PC o Raspberry Pi 5 con SSD: recibe las fotos y corre la IA</small>", "big");
+serverLabel.obj = server; serverLabel.offset.set(0, 2, 0);
+
+// =====================================================================
+// Camión recolector
+// =====================================================================
+const wheels = [];
+const truck = new THREE.Group();
+const white = M(0xf3f3ee, {roughness: .55}), dark = M(0x25282b), grey = M(0x9aa0a6, {metalness: .4, roughness: .45});
+const glass = M(0x8fbcd8, {roughness: .05, metalness: .3, transparent: true, opacity: .3});
+truck.add(box(9.2, .35, 1.4, dark, -.6, .8, 0));
+truck.add(box(6, 3.0, 2.5, white, -2.1, 2.5, 0));
+const sideTex = textTex(1024, 220, (g, w, h) => {
+  g.fillStyle = "#2f8f5b"; g.fillRect(0, 150, w, 70);
+  g.fillStyle = "#1d2329"; g.font = "700 64px system-ui"; g.fillText("RECOLECCIÓN DE RESIDUOS", 40, 90);
+  g.fillStyle = "#fff"; g.font = "600 40px system-ui"; g.fillText("Piloto · 2 celulares en desuso a bordo", 40, 198);
+});
+for (const s of [1, -1]) {
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 1.2), new THREE.MeshBasicMaterial({map: sideTex, transparent: true}));
+  p.position.set(-2.1, 2.2, s * 1.26); if (s < 0) p.rotation.y = Math.PI; truck.add(p);
+}
+// tolva trasera, estribo y pala compactadora
+const hopper = new THREE.Group();
+hopper.position.set(-5.3, 0, 0);
+truck.add(hopper);
+hopper.add(box(1.0, 2.6, 2.55, grey, -.35, 2.6, 0));
+hopper.add(box(.9, .9, 2.4, M(0x6d737a, {metalness: .4, roughness: .5}), -.75, 1.45, 0));
+hopper.add(box(.25, .12, 2.4, M(0xf2c230), -1.15, 1.95, 0));
+hopper.add(box(.5, .12, 2.2, dark, -1.15, .75, 0));
+for (const z of [-1.05, 1.05]) hopper.add(box(.06, 1.2, .06, M(0xf2c230), -1.2, 1.4, z)); // agarraderas
+const blade = new THREE.Group();
+blade.position.set(-.8, 3.6, 0);
+blade.add(box(.12, 1.6, 2.2, M(0x55606a, {metalness: .5}), -.06, -.8, 0));
+hopper.add(blade);
+// cabina: parte baja maciza y parte alta con vidrios, para que se vean los celulares
+truck.add(box(2.5, 1.4, 2.45, white, 2.7, 1.6, 0));
+truck.add(box(1.7, .1, 2.45, white, 2.2, 3.47, 0));            // techo
+truck.add(box(.1, 1.2, 2.45, white, 1.4, 2.9, 0));             // pared trasera
+for (const z of [-1.18, 1.18]) {
+  truck.add(box(.08, 1.15, .08, white, 3.0, 2.9, z));          // parantes del parabrisas
+  truck.add(box(.42, 1.15, .06, white, 1.66, 2.9, z * 1.035)); // tramo macizo de la puerta
+}
+truck.add(box(.06, 1.0, 2.25, glass, 3.03, 2.9, 0));
+truck.add(box(1.1, .95, .05, glass, 2.4, 2.95, 1.23));
+truck.add(box(1.1, .95, .05, glass, 2.4, 2.95, -1.23));
+truck.add(box(.6, .2, 2.2, dark, 2.75, 2.2, 0));               // tablero
+for (const z of [-.55, .55]) { truck.add(box(.5, .12, .7, M(0x3a3e42), 2.0, 2.4, z)); truck.add(box(.12, .7, .7, M(0x3a3e42), 1.75, 2.75, z)); }
+truck.add(box(.08, 1.0, 2.3, dark, 3.96, 1.55, 0));
+for (let i = 0; i < 4; i++) truck.add(box(.09, .06, 2.1, M(0x50555a), 3.97, 1.2 + i * .22, 0));
+truck.add(box(.3, .35, 2.6, M(0x3a3e42), 3.95, .75, 0));
+for (const z of [-.95, .95]) truck.add(box(.06, .22, .35, M(0xfff6d8, {emissive: 0xfff2c0, emissiveIntensity: .6}), 3.98, 1.95, z));
+for (const s of [1, -1]) {
+  // espejos: las cámaras de los celulares no los ven (capa 1)
+  for (const m of [box(.06, .06, .5, dark, 3.1, 3.1, s * 1.45), box(.08, .45, .22, dark, 3.1, 2.95, s * 1.72)]) { m.layers.set(1); truck.add(m); }
+  truck.add(box(.5, .08, .4, dark, 2.6, .95, s * 1.35));
+}
+const fuel = cyl(.35, .35, 1.2, grey, 16); fuel.rotation.z = Math.PI / 2; fuel.position.set(.9, 1.0, 1.15); truck.add(fuel);
+const beacons = [];
+for (const z of [-.7, .7]) {
+  const b = box(.25, .2, .25, new THREE.MeshStandardMaterial({color: 0xffa500, emissive: 0x000000}), 2.2, 3.62, z);
+  truck.add(b); beacons.push(b);
+}
+const AXLES = [2.6, -2.6, -3.9];
+const wg = new THREE.CylinderGeometry(.55, .55, .42, 22); wg.rotateX(Math.PI / 2);
+const hubG = new THREE.CylinderGeometry(.25, .25, .44, 12); hubG.rotateX(Math.PI / 2);
+for (const x of AXLES) for (const z of [-1.1, 1.1]) {
+  const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(x, .55, z); truck.add(w); wheels.push(w);
+  const h = new THREE.Mesh(hubG, grey); h.position.set(x, .55, z); truck.add(h); wheels.push(h);
+  truck.add(box(1.3, .08, .5, dark, x, 1.18, z * 1.03));
+}
+truck.position.set(-80, 0, ROAD_Z);
+scene.add(truck);
+
+// los dos celulares: uno mira la calle (baches) y el otro la vereda (poda)
+// vista: 70° de ancho en 16:9 → 43° de alto
+const CAMS = {
+  front: {pos: V3(3.0, 3.15, 0), dir: V3(1, -.42, 0).normalize(), title: "Celular adelante · baches", res: "1920 × 1080", count: 0, flash: 0},
+  side: {pos: V3(2.3, 3.1, 1.12), dir: V3(.05, -.6, 1).normalize(), title: "Celular costado · poda y residuos", res: "1280 × 720", count: 0, flash: 0}
+};
+const helpers = []; // lo que no tiene que salir en las fotos
+for (const [key, C] of Object.entries(CAMS)) {
+  const ph = makePhone(.42, .86, .05, true);
+  const flat = V3(C.dir.x, 0, C.dir.z).normalize();
+  ph.quaternion.setFromUnitVectors(V3(0, 0, -1), flat);
+  ph.rotateX(-Math.asin(-C.dir.y));
+  ph.rotateZ(Math.PI / 2);
+  ph.position.copy(C.pos);
+  truck.add(ph);
+  const arm = box(.08, .22, .08, dark, C.pos.x, 3.36, C.pos.z); truck.add(arm);
+  C.phone = ph; helpers.push(ph, arm);
+  C.cam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
+  C.world = new THREE.Vector3();
+  C.label = makeLabel(key === "front" ? "<b>Celular adelante</b> · baches" : "<b>Celular costado</b> · poda", "");
+  C.label.obj = ph; C.label.offset.set(0, .75, key === "side" ? .4 : 0);
+}
+// zonas que fotografía cada celular, marcadas en el piso
+const zoneMat = new THREE.MeshBasicMaterial({color: 0xf2c230, transparent: true, opacity: .22, depthWrite: false});
+const zoneLine = new THREE.LineBasicMaterial({color: 0xd4a514, transparent: true, opacity: .8});
+function zone(x0, x1, z0, z1, y, from) {
+  const g = new THREE.Group();
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), zoneMat);
+  pl.rotation.x = -Math.PI / 2; pl.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); g.add(pl);
+  const c = [V3(x0, y, z0), V3(x1, y, z0), V3(x1, y, z1), V3(x0, y, z1)];
+  g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(c), zoneLine));
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(c.flatMap(p => [from, p])), zoneLine));
+  truck.add(g); helpers.push(g); return g;
+}
+// adelante: de 4 a 9 m delante del celular, en el carril
+const frontZone = zone(CAMS.front.pos.x + 4, CAMS.front.pos.x + 9, -1.75, 1.75, .03, CAMS.front.pos);
+// costado: 5,6 m de vereda por foto (a ~4 m, con 70° de ancho)
+const sideZone = zone(CAMS.side.pos.x - 2.8, CAMS.side.pos.x + 2.8, 2.35, 5.3, .25, CAMS.side.pos);
+const zoneLblF = makeLabel("Zona útil para baches: 4–9 m", "zone"); zoneLblF.obj = frontZone; zoneLblF.pos = null;
+zoneLblF.offset.set(CAMS.front.pos.x + 9, .1, 0);
+const zoneLblS = makeLabel("5,6 m de vereda por foto", "zone"); zoneLblS.obj = sideZone;
+zoneLblS.offset.set(CAMS.side.pos.x, .3, 5.3);
+function updatePhoneCams(fullAspect) {
+  truck.updateMatrixWorld();
+  for (const [key, C] of Object.entries(CAMS)) {
+    C.world.copy(C.pos); truck.localToWorld(C.world);
+    C.cam.position.copy(C.world);
+    C.cam.lookAt(C.world.clone().add(C.dir));
+    C.cam.aspect = fullAspect && view === key ? innerWidth / innerHeight : 16 / 9;
+    C.cam.updateProjectionMatrix(); C.cam.updateMatrixWorld();
+  }
+}
+
+// =====================================================================
+// Recolectores
+// =====================================================================
+function makeWorker() {
+  const g = new THREE.Group(), vest = M(0xff7a1a), pants = M(0x2f3b52), skin = M(0xc8996e), refl = M(0xe8ecef, {emissive: 0x333333});
+  const limb = (w, h, d, mat, y) => { const p = new THREE.Group(); p.position.y = y; p.add(box(w, h, d, mat, 0, -h / 2, 0)); return p; };
+  const legL = limb(.16, .82, .18, pants, .85), legR = limb(.16, .82, .18, pants, .85);
+  legL.position.z = -.11; legR.position.z = .11;
+  const armL = limb(.12, .62, .12, vest, 1.45), armR = limb(.12, .62, .12, vest, 1.45);
+  armL.position.z = -.3; armR.position.z = .3;
+  g.add(legL, legR, armL, armR);
+  g.add(box(.3, .62, .48, vest, 0, 1.16, 0));
+  g.add(box(.31, .07, .49, refl, 0, 1.0, 0));
+  g.add(box(.31, .07, .49, refl, 0, 1.25, 0));
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.14, 12, 10), skin); head.position.y = 1.62; g.add(head);
+  const cap = cyl(.15, .15, .08, M(0x1f6feb), 12); cap.position.y = 1.74; g.add(cap);
+  return {g, legL, legR, armL, armR, phase: 0, last: new THREE.Vector3()};
+}
+const workers = [makeWorker(), makeWorker()];
+for (const w of workers) scene.add(w.g);
+function placeWorker(w, pos, carrying) {
+  const d = pos.clone().sub(w.last); d.y = 0;
+  const moved = d.length();
+  if (moved > 1e-4 && moved < 2) { w.g.rotation.y = Math.atan2(-d.z, d.x); w.phase += moved * 5; }
+  const walking = moved > 1e-4 && moved < 2;
+  const swing = walking ? Math.sin(w.phase) * .6 : w.legL.rotation.z * .8;
+  w.legL.rotation.z = swing; w.legR.rotation.z = -swing;
+  w.armL.rotation.z = carrying ? -1.2 : -swing * .7; w.armR.rotation.z = carrying ? -1.2 : swing * .7;
+  w.g.position.copy(pos); w.last.copy(pos);
+}
+
+// =====================================================================
+// Baches, montones en la vereda y bolsas de los contenedores
+// =====================================================================
+function makeHole(r) {
+  const g = new THREE.Group();
+  const shape = k => {
+    const s = new THREE.Shape();
+    for (let i = 0; i < 14; i++) {
+      const a = i / 14 * Math.PI * 2, rr = r * k * (.78 + rnd() * .38);
+      i ? s.lineTo(Math.cos(a) * rr * 1.3, Math.sin(a) * rr) : s.moveTo(Math.cos(a) * rr * 1.3, Math.sin(a) * rr);
+    }
+    return s;
+  };
+  for (const [k, col, y] of [[1, 0x37393d, .013], [.68, 0x232427, .016], [.38, 0x18191b, .018]]) {
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape(k)), M(col, {roughness: 1}));
+    m.rotation.x = -Math.PI / 2; m.position.y = y; g.add(m);
+  }
+  for (let i = 0; i < 10; i++) { // borde roto
+    const a = rnd() * Math.PI * 2, d = r * (1 + rnd() * .35);
+    const s = new THREE.Mesh(new THREE.DodecahedronGeometry(.05 + rnd() * .05, 0), M(0x6b6e72, {flatShading: true}));
+    s.position.set(Math.cos(a) * d * 1.3, .03, Math.sin(a) * d); g.add(s);
+  }
+  for (let i = 0; i < 4; i++) { // grietas
+    const a = rnd() * Math.PI * 2, len = .4 + rnd() * .5, d = r * 1.05 + len / 2;
+    const c = box(len, .004, .035, M(0x222326)); c.position.set(Math.cos(a) * d * 1.25, .014, Math.sin(a) * d); c.rotation.y = -a; g.add(c);
+  }
+  return g;
+}
+const TYPES = {
+  bache: {name: "Bache", yolo: "bache"},
+  poda: {name: "Poda", yolo: "poda", make: () => {
+    const g = new THREE.Group();
+    for (let i = 0; i < 16; i++) {
+      const b = new THREE.Group(), len = 1.3 + rnd() * 1.4;
+      b.add(cyl(.04, .07, len, M(0x7a5a3a)));
+      for (let k = 0; k < 3; k++) { const tw = cyl(.015, .03, .5 + rnd() * .4, M(0x6e5034)); tw.position.y = (rnd() - .5) * len * .7; tw.rotation.z = (rnd() - .5) * 1.6; tw.translateY(.2); b.add(tw); }
+      b.position.set((rnd() - .5) * 1.6, .3 + rnd() * .55, (rnd() - .5) * 1.1);
+      b.rotation.set(rnd() * 3, rnd() * 3, Math.PI / 2 + (rnd() - .5));
+      g.add(b);
+    }
+    for (let i = 0; i < 8; i++) {
+      const s = new THREE.Mesh(new THREE.IcosahedronGeometry(.28 + rnd() * .2, 0), M(rnd() > .3 ? 0x6f9a4f : 0x9a8a3f, {flatShading: true}));
+      s.position.set((rnd() - .5) * 1.5, .45 + rnd() * .5, (rnd() - .5) * 1); g.add(s);
+    }
+    return g;
+  }},
+  bolsas: {name: "Bolsas y residuos", yolo: "bolsas", make: () => {
+    const g = new THREE.Group();
+    for (let i = 0; i < 14; i++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(.28 + rnd() * .2, 9, 7), M(rnd() > .3 ? 0x1f1f22 : 0x2f6db3, {roughness: .35}));
+      s.scale.y = .78; s.position.set((rnd() - .5) * 2, .28 + rnd() * .3, (rnd() - .5) * 1.3); g.add(s);
+    }
+    for (let i = 0; i < 5; i++) g.add(box(.4, .3, .3, M(0xcaa46a), (rnd() - .5) * 1.8, .15, (rnd() - .5) * 1.1));
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(.38, .14, 8, 18), M(0x1a1a1a)); tire.rotation.x = Math.PI / 2; tire.position.set(-.9, .14, .4); g.add(tire);
+    return g;
+  }},
+  escombro: {name: "Escombro y voluminosos", yolo: "escombro", make: () => {
+    const g = new THREE.Group();
+    for (let i = 0; i < 16; i++) {
+      const brick = rnd() > .45, s = .18 + rnd() * .3;
+      const b = brick ? box(.42, .14, .2, M(0xb5654a)) : new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), M(0x9b9b95, {flatShading: true}));
+      b.position.set(-.5 + (rnd() - .5) * 1.2, .12 + rnd() * .4, (rnd() - .5) * 1.1); b.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); g.add(b);
+    }
+    const sofa = new THREE.Group();
+    sofa.add(box(1.4, .4, .7, M(0x8a5a44), 0, .35, 0));
+    sofa.add(box(1.4, .55, .18, M(0x8a5a44), 0, .75, -.28));
+    sofa.add(box(.18, .35, .7, M(0x7a4d39), -.7, .6, 0)); sofa.add(box(.18, .35, .7, M(0x7a4d39), .7, .6, 0));
+    sofa.position.set(.9, 0, .1); sofa.rotation.y = -.3; g.add(sofa);
+    return g;
+  }}
+};
+// cada día el camión pasa una vez. appear: día en que aparece; end: día en que ya no está (reparado o retirado)
+const HOLES = [
+  {x: -62, z: ROAD_Z + 1.1, r: .62, appear: 1, end: 4},
+  {x: -26, z: ROAD_Z, r: .55, appear: 1, end: 3},
+  {x: 2, z: ROAD_Z - 1.1, r: .7, appear: 2, end: 5},
+  {x: 21, z: ROAD_Z + 1.1, r: .58, appear: 1, end: 2},
+  {x: 46, z: ROAD_Z, r: .5, appear: 3, end: 5},
+  {x: 74, z: ROAD_Z - 1.1, r: .66, appear: 1, end: 5}
+];
+const SIDE = [
+  {x: SIDE_XS[0], type: "poda", appear: 1, end: 3},
+  {x: SIDE_XS[1], type: "bolsas", appear: 1, end: 2},
+  {x: SIDE_XS[2], type: "poda", appear: 2, end: 4},
+  {x: SIDE_XS[3], type: "escombro", appear: 1, end: 5},
+  {x: SIDE_XS[4], type: "poda", appear: 3, end: 5}
+];
+const OBJS = [
+  ...HOLES.map(h => Object.assign({kind: "hole", type: "bache", cam: "front"}, h)),
+  ...SIDE.map(s => Object.assign({kind: "side", z: 5.9, cam: "side"}, s))
+];
+const objGroup = new THREE.Group(); scene.add(objGroup);
+const heatGroup = new THREE.Group(); heatGroup.visible = false; scene.add(heatGroup);
+for (const o of OBJS) {
+  o.obj = o.kind === "hole" ? makeHole(o.r) : TYPES[o.type].make();
+  o.obj.position.set(o.x, o.kind === "hole" ? 0 : .22, o.z);
+  o.home = o.obj.position.clone();
+  o.local = new THREE.Box3().setFromObject(o.obj);
+  o.local.min.sub(o.home); o.local.max.sub(o.home);
+  if (o.kind === "hole") { o.local.min.y = 0; o.local.max.y = .12; }
+  o.conf = (.8 + rnd() * .15).toFixed(2);
+  o.label = makeLabel("", "det"); o.label.obj = o.obj; o.label.offset.set(0, o.kind === "hole" ? .9 : 2.2, 0);
+  o.heat = new THREE.Mesh(new THREE.CircleGeometry(o.kind === "hole" ? 2 : 3, 40), new THREE.MeshBasicMaterial({color: 0xd98a00, transparent: true, opacity: .55, depthWrite: false}));
+  o.heat.rotation.x = -Math.PI / 2; o.heat.position.set(o.x, .3, o.z); heatGroup.add(o.heat);
+  if (o.kind === "hole") { // parche que queda cuando lo reparan
+    o.patch = box(o.r * 3.2, .01, o.r * 2.6, M(0x62666b, {roughness: 1}), o.x, .012, o.z);
+    objGroup.add(o.patch);
+  }
+  objGroup.add(o.obj);
+}
+const present = o => o.appear <= S.day && S.day < o.end;
+// bolsas domiciliarias arriba de cada contenedor (lo que el camión levanta siempre)
+const STOPS = STOP_XS.map(x => {
+  const bag = new THREE.Group();
+  for (let i = 0; i < 3; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(.22, 9, 7), M(0x1f1f22, {roughness: .35})); s.scale.y = .8; s.position.set(-.35 + i * .35, 0, (rnd() - .5) * .3); bag.add(s); }
+  const home = V3(x, 1.62, 6.2);
+  bag.position.copy(home); objGroup.add(bag);
+  return {x, bag, home};
+});
+
+// =====================================================================
+// Kit
+// =====================================================================
+const kit = new THREE.Group(); kit.visible = false; scene.add(kit);
+const studioFloor = new THREE.Mesh(new THREE.CircleGeometry(11, 64), M(0xe3e7ea, {roughness: 1}));
+studioFloor.rotation.x = -Math.PI / 2; kit.add(studioFloor);
+const KIT = [];
+const qYaw = a => new THREE.Quaternion().setFromAxisAngle(V3(0, 1, 0), a);
+function kitPart(obj, ex, as, html, lblY, qEx = qYaw(0), qAs = qEx) {
+  Object.assign(obj.userData, {ex, as, qEx, qAs});
+  obj.position.copy(ex); obj.quaternion.copy(qEx); kit.add(obj);
+  const l = makeLabel(html, "big"); l.obj = obj; l.offset.set(0, lblY, 0); KIT.push({obj, l});
+}
+function mountedPhone() { // celular apaisado en su soporte con sopapa
+  const G = new THREE.Group(), blk = M(0x2b2d31, {roughness: .5});
+  const p = makePhone(.9, 1.85, .09, true); p.rotation.z = Math.PI / 2; G.add(p);
+  for (const y of [-.5, .5]) G.add(box(1.5, .1, .22, blk, 0, y, -.05));
+  G.add(box(.14, .45, .14, blk, 0, .78, -.12));
+  const cup = cyl(.3, .34, .06, M(0x3a3d42, {roughness: .3}), 28); cup.position.set(0, 1.03, -.12); G.add(cup);
+  return G;
+}
+const kitFront = mountedPhone(), kitSide = mountedPhone();
+kitPart(kitFront, V3(-2.6, 3.5, .8), V3(-.4, 2.55, -1.0),
+  "<b>Celular adelante · baches</b><small>En desuso y sin batería. Arriba al centro del parabrisas. Fotos de 1920 × 1080</small>", 1.5);
+kitPart(kitSide, V3(1.5, 3.5, .8), V3(2.95, 2.45, .1),
+  "<b>Celular costado · poda y residuos</b><small>En el vidrio del acompañante. Fotos de 1280 × 720: sirve el más viejo</small>", 1.5, qYaw(0), qYaw(-Math.PI / 2));
+const regulator = new THREE.Group();
+{ // regulador 12/24 V → 4 V que reemplaza la batería
+  regulator.add(box(.9, .26, .6, M(0x1f4f8b, {roughness: .5}), 0, 0, 0));
+  for (let i = 0; i < 6; i++) regulator.add(box(.04, .14, .56, M(0xb8bcc0, {metalness: .7, roughness: .3}), -.35 + i * .14, .2, 0));
+  regulator.add(box(.35, .06, .25, M(0xd8b04a, {metalness: .8, roughness: .3}), -.75, -.05, 0)); // batería falsa
+  kitPart(regulator, V3(-4.3, 1.3, 2.4), V3(-1.6, 1.13, .4),
+    "<b>Regulador 12/24 V → 4 V</b><small>Reemplaza la batería. Con una resistencia en el pin de temperatura, el celular arranca</small>", .9);
+}
+const dashKit = new THREE.Group();
+{ // kit de cableado de dashcam con temporizador
+  dashKit.add(box(.75, .28, .45, M(0x16181b, {roughness: .4}), 0, 0, 0));
+  dashKit.add(box(.32, .12, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x1d7a45, emissiveIntensity: .8}), 0, .02, .235));
+  for (let i = 0; i < 3; i++) dashKit.add(box(.12, .08, .22, M(0xd64545), -.55 - i * .2, -.08, .45));
+  kitPart(dashKit, V3(3.3, 1.3, 2.4), V3(1.0, 1.13, .4),
+    "<b>Kit de cableado de dashcam</b><small>Temporizador de 60–90 min y corte por bajo voltaje: en la base siguen prendidos para subir las fotos</small>", .9);
+}
+const kitServer = new THREE.Group();
+{ // servidor de la base (no va en el camión)
+  kitServer.add(box(.9, .32, .6, M(0xd64545, {roughness: .5}), 0, .16, 0));
+  kitServer.add(box(.9, .06, .6, M(0xf3f3ee), 0, .35, 0));
+  kitServer.add(box(.6, .14, .42, M(0x6d737a, {metalness: .4}), .9, .07, 0));
+  kitServer.add(box(.06, .06, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x2e9e5b}), -.3, .2, .31));
+  kitServer.position.set(-.8, 0, 4.4); kit.add(kitServer);
+  const l = makeLabel("<b>Servidor en la base · uno para todos</b><small>Mini PC o Raspberry Pi 5 con SSD. Recibe las fotos por Wi-Fi y corre la IA (RF-DETR)</small>", "big");
+  l.obj = kitServer; l.offset.set(0, .9, 0); KIT.push({obj: kitServer, l, fixed: true});
+}
+// cabina de referencia: tablero, parabrisas y vidrio lateral
+const cab = new THREE.Group(); kit.add(cab);
+cab.add(box(6.4, .5, 2.2, M(0x3a3e42, {roughness: .7}), 0, .75, 0));
+const kitGlass = M(0x8fbcd8, {roughness: .05, metalness: .3, transparent: true, opacity: .25});
+cab.add(box(6.4, 2.9, .05, kitGlass, 0, 2.45, -1.15));
+cab.add(box(.05, 2.4, 2.2, kitGlass, 3.2, 2.2, 0));
+for (const [w, h, d, x, y, z] of [[6.5, .12, .12, 0, 3.9, -1.15], [.12, 2.9, .12, -3.2, 2.45, -1.15], [.12, 2.9, .12, 3.2, 2.45, -1.15], [.12, .12, 2.3, 3.2, 3.4, 0]])
+  cab.add(box(w, h, d, M(0xd5d8db), x, y, z));
+const cables = [];
+function drawCables() {
+  for (const c of cables) { kit.remove(c); c.geometry.dispose(); }
+  cables.length = 0;
+  const reg = regulator.position, dk = dashKit.position;
+  for (const [a, b] of [[reg.clone().add(V3(.45, 0, 0)), kitFront.position.clone().add(V3(.4, -.5, .1))],
+                        [reg.clone().add(V3(.45, .05, .1)), kitSide.position.clone().add(V3(0, -.5, .1))],
+                        [dk.clone().add(V3(-.4, 0, 0)), reg.clone().add(V3(.45, -.05, -.1))]]) {
+    const mid = a.clone().lerp(b, .5); mid.y = Math.min(a.y, b.y) - .7;
+    const curve = new THREE.CatmullRomCurve3([a, a.clone().lerp(mid, .4).add(V3(0, -.1, 0)), mid, b.clone().lerp(mid, .3), b]);
+    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 60, .03, 6), M(0x202124, {roughness: .5}));
+    kit.add(m); cables.push(m);
+  }
+}
+let explodeT = 1, explodeTarget = 1, glbObj = null;
+
+// =====================================================================
+// Sensores
+// =====================================================================
+const sens = new THREE.Group(); sens.visible = false; scene.add(sens);
+const sensFloor = studioFloor.clone(); sens.add(sensFloor);
+const bigPhone = makePhone(1.4, 2.85, .14, false);
+bigPhone.position.y = 3;
+sens.add(bigPhone);
+const SENS_LBL = [];
+for (const [d, c, html] of [
+  [V3(1, 0, 0), 0xd64545, "<b>X · frenado y arranque</b><small>Si el camión para, no saca fotos</small>"],
+  [V3(0, 1, 0), 0x2e9e5b, "<b>Y · lateral</b><small>Curvas y giros del camión</small>"],
+  [V3(0, 0, 1), 0x1f6feb, "<b>Z · vibración vertical</b><small>El golpe de la rueda en el bache</small>"]]) {
+  bigPhone.add(new THREE.ArrowHelper(d, V3(0, 0, 0), 2.7, c, .35, .2));
+  const l = makeLabel(html, "big"); l.obj = bigPhone; l.offset.copy(d.clone().multiplyScalar(3)); SENS_LBL.push(l);
+}
+for (const [rot, c] of [[[Math.PI / 2, 0, 0], 0xd64545], [[0, Math.PI / 2, 0], 0x2e9e5b], [[0, 0, 0], 0x1f6feb]]) {
+  const t = new THREE.Mesh(new THREE.TorusGeometry(2, .025, 8, 72), new THREE.MeshBasicMaterial({color: c, transparent: true, opacity: .5}));
+  t.rotation.set(...rot); bigPhone.add(t);
+}
+const sat = new THREE.Group();
+sat.add(box(.5, .5, .5, M(0xb0b6bc, {metalness: .5})));
+sat.add(box(1.8, .04, .55, M(0x1f4f8b, {metalness: .3, roughness: .3})));
+sat.position.set(3, 6.4, -2); sens.add(sat);
+const satLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([sat.position, V3(0, 3, 0)]), new THREE.LineDashedMaterial({color: 0x5b6670, dashSize: .2, gapSize: .15}));
+satLine.computeLineDistances(); sens.add(satLine);
+const camCone = new THREE.Mesh(new THREE.ConeGeometry(1.4, 4, 32, 1, true).translate(0, -2, 0),
+  new THREE.MeshBasicMaterial({color: 0xf2c230, transparent: true, opacity: .18, side: THREE.DoubleSide, depthWrite: false}));
+camCone.position.set(-.28, .91, -.2);
+camCone.quaternion.setFromUnitVectors(V3(0, -1, 0), V3(0, -.15, -1).normalize());
+bigPhone.add(camCone);
+for (const [html, obj, off] of [
+  ["<b>Giroscopio</b><small>Controla que el soporte no se haya movido</small>", bigPhone, V3(-2.4, 1.7, 0)],
+  ["<b>GPS</b><small>Ubica cada foto y mide los 2,5 m entre disparos</small>", sat, V3(0, .8, 0)],
+  ["<b>Cámara</b><small>Solo saca fotos: la IA corre en el servidor</small>", bigPhone, V3(-.6, .6, -3.8)]]) {
+  const l = makeLabel(html, "big"); l.obj = obj; l.offset.copy(off); SENS_LBL.push(l);
+}
+
+// sombras: todo proyecta y recibe, salvo lo transparente, lo plano y el horizonte
+scene.traverse(o => {
+  if (!o.isMesh || o.userData.noShadow) return;
+  o.receiveShadow = true;
+  if (!o.material.transparent && o !== ground && o !== street && o !== studioFloor && o !== sensFloor) o.castShadow = true;
+});
+
+// =====================================================================
+// Simulación del recorrido
+// =====================================================================
+const VMAX = 7, ACC = 3.2, START_X = -80, DEPOT_STOP = DEPOT_X - 2, SHOT_M = 2.5;
+const S = {day: 1, x: START_X, v: 0, ax: 0, mode: "drive", t: 0, dayT: 0, target: null, paused: false, speed: 1, simT: 0,
+  odo: 0, nextShot: SHOT_M, bumpAmp: 0, bounce: 0, saidStop: false, results: [], phase: ""};
+const EVENTS = [];
+const logEl = document.getElementById("log");
+const lonOf = x => (-65.31 + x * 0.00012).toFixed(5), LAT = "-43.24890";
+const hhmm = () => { const m = 7 * 60 + Math.floor(S.dayT); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+function log(html, ev) {
+  const li = document.createElement("li");
+  li.innerHTML = `<em>Día ${S.day} · ${hhmm()} ·</em> ${html}`;
+  logEl.prepend(li);
+  while (logEl.children.length > 60) logEl.lastChild.remove();
+  if (ev) EVENTS.push(Object.assign({dia: S.day, hora: hhmm(), clase: "", confianza: "", gravedad: "", lat: LAT, lon: "", demora_dias: ""}, ev));
+}
+function startDay() {
+  S.x = START_X; S.v = 0; S.mode = "drive"; S.target = null; S.dayT = 0; S.odo = 0; S.nextShot = SHOT_M; S.saidStop = false;
+  for (const o of OBJS) {
+    o.obj.visible = present(o);
+    if (o.patch) o.patch.visible = S.day >= o.end;
+    o.shotsToday = 0; o.thumb = null; o.snapBox = null; o.bumpToday = false;
+  }
+  for (const st of STOPS) { st.bag.visible = true; st.bag.position.copy(st.home); st.bag.scale.setScalar(1); }
+  for (const C of Object.values(CAMS)) C.count = 0;
+  document.getElementById("day").textContent = `Día ${S.day} de 4`;
+}
+function resetAll() {
+  S.day = 1;
+  for (const o of OBJS) { o.firstSeen = undefined; o.resolved = undefined; o.delay = undefined; o.bumpEver = false; o.sev = ""; }
+  logEl.innerHTML = ""; EVENTS.length = 0;
+  startDay();
+  log("Arranca el recorrido. Los celulares no tienen batería: se prenden solos al dar contacto y abren la app.");
+}
+function nextTarget() {
+  let best = null;
+  for (const st of STOPS) {
+    const stopX = st.x + 6.3;
+    if (stopX > S.x + .01 && (!best || stopX < best.stopX)) best = {st, stopX};
+  }
+  return best || {st: null, stopX: DEPOT_STOP};
+}
+// proyección de la caja de un objeto en la imagen de una cámara (coordenadas −1..1), o null si no se ve
+const corners = Array.from({length: 8}, () => new THREE.Vector3()), camSpace = new THREE.Vector3();
+function projectBox(o, cam) {
+  const b = o.local, h = o.home;
+  let i = 0;
+  for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) corners[i++].set(h.x + x, h.y + y, h.z + z);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const c of corners) {
+    camSpace.copy(c).applyMatrix4(cam.matrixWorldInverse);
+    if (camSpace.z > -.3) return null;
+    c.project(cam);
+    x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y);
+  }
+  if (x1 < -1 || x0 > 1 || y1 < -1 || y0 > 1) return null;
+  return [Math.max(x0, -1), Math.max(y0, -1), Math.min(x1, 1), Math.min(y1, 1)];
+}
+// foto de evidencia: se renderiza la vista del celular en una textura aparte y se copia a un canvas
+const SNAP_W = 384, SNAP_H = 216;
+const snapRT = new THREE.WebGLRenderTarget(SNAP_W, SNAP_H), snapBuf = new Uint8Array(SNAP_W * SNAP_H * 4);
+function setHelpers(on) { for (const h of helpers) h.visible = on; }
+function snap(cam) {
+  const heat = heatGroup.visible;
+  setHelpers(false); heatGroup.visible = false;
+  renderer.setRenderTarget(snapRT); renderer.render(scene, cam);
+  renderer.readRenderTargetPixels(snapRT, 0, 0, SNAP_W, SNAP_H, snapBuf);
+  renderer.setRenderTarget(null);
+  setHelpers(true); heatGroup.visible = heat;
+  const c = document.createElement("canvas"); c.width = SNAP_W; c.height = SNAP_H;
+  const g = c.getContext("2d"), img = g.createImageData(SNAP_W, SNAP_H);
+  for (let y = 0; y < SNAP_H; y++) img.data.set(snapBuf.subarray((SNAP_H - 1 - y) * SNAP_W * 4, (SNAP_H - y) * SNAP_W * 4), y * SNAP_W * 4);
+  g.putImageData(img, 0, 0);
+  return c;
+}
+// disparo: los dos celulares sacan una foto cada 2,5 m recorridos
+function shoot() {
+  updatePhoneCams(false);
+  for (const C of Object.values(CAMS)) { C.count++; C.flash = 1; }
+  for (const o of OBJS) {
+    if (!present(o)) continue;
+    const C = CAMS[o.cam];
+    if (o.kind === "hole") {
+      const d = o.x - C.world.x;
+      if (d < 4 || d > 9) continue;
+      o.shotsToday++;
+      if (!o.thumb && d <= 7) { o.snapBox = projectBox(o, C.cam); o.thumb = snap(C.cam); }
+    } else {
+      const dx = Math.abs(o.x - C.world.x);
+      if (dx > 2.4) continue;
+      o.shotsToday++;
+      if (!o.thumb && dx <= 1.3) { o.snapBox = projectBox(o, C.cam); o.thumb = snap(C.cam); }
+    }
+  }
+  document.getElementById("cntF").textContent = `foto ${CAMS.front.count}`;
+  document.getElementById("cntS").textContent = `foto ${CAMS.side.count}`;
+}
+// golpe de la rueda en un bache: lo registra el acelerómetro
+function checkBumps(prevX) {
+  for (const o of OBJS) {
+    if (o.kind !== "hole" || !present(o)) continue;
+    for (const ax of AXLES) {
+      if (!(prevX + ax < o.x && S.x + ax >= o.x)) continue;
+      for (const wz of [ROAD_Z + 1.1, ROAD_Z - 1.1]) {
+        if (Math.abs(wz - o.z) > o.r * 1.1) continue;
+        S.bumpAmp = .5; S.bounce = .07;
+        if (!o.bumpToday) {
+          o.bumpToday = true; o.bumpEver = true;
+          log(`Acelerómetro: <b>golpe</b> en el carril · GPS ${LAT}, ${lonOf(o.x)}`, {evento: "golpe", lon: lonOf(o.x)});
+        }
+      }
+    }
+  }
+}
+// en la base: subida por Wi-Fi, análisis en el servidor y actualización del mapa
+const UP = {upload: 2.5, analyze: 5.5, done: 9};
+function serverResults() {
+  S.results = OBJS.filter(o => present(o) && o.shotsToday >= 2);
+  for (const o of S.results) if (o.kind === "hole") o.sev = o.bumpEver ? "alta" : "media";
+}
+function applyMap() {
+  let nuevos = 0, resueltos = 0;
+  for (const o of S.results) {
+    if (o.firstSeen !== undefined) continue;
+    o.firstSeen = S.day; nuevos++;
+    const extra = o.kind === "hole" ? ` · gravedad <b>${o.sev}</b>${o.bumpEver ? " (golpe en el acelerómetro)" : ""}` : "";
+    log(`Servidor: nuevo <b>${TYPES[o.type].name}</b> en el mapa (confianza ${coma(o.conf)})${extra}`,
+      {evento: "deteccion", clase: o.type, confianza: o.conf, gravedad: o.sev, lon: lonOf(o.x)});
+  }
+  for (const o of OBJS) {
+    if (o.firstSeen === undefined || o.resolved !== undefined || present(o)) continue;
+    o.resolved = S.day; o.delay = S.day - o.firstSeen; resueltos++;
+    log(`<b>Resuelto:</b> ${TYPES[o.type].name}${o.kind === "hole" ? " reparado" : " retirado"}: las fotos de hoy ya no lo muestran · demora <b>${o.delay} día${o.delay === 1 ? "" : "s"}</b>`,
+      {evento: "resuelto", clase: o.type, lon: lonOf(o.x), demora_dias: o.delay});
+  }
+  S.mapSummary = {nuevos, resueltos};
+}
+// acelerómetro simulado
+const BUF = 300, accZ = new Float32Array(BUF), accX = new Float32Array(BUF);
+let bufI = 0, sampleAcc = 0, lastV = 0, compactOn = false;
+const gauss = () => (rnd() + rnd() + rnd() - 1.5) * .8;
+function sample() {
+  let z = gauss() * (.015 + .05 * S.v / VMAX);
+  if (S.bumpAmp > .02) { z += S.bumpAmp * (bufI % 2 ? 1 : -.8); S.bumpAmp *= .55; }
+  if (compactOn) z += .18 * Math.sin(S.simT * 2 * Math.PI * 4) + gauss() * .04;
+  accZ[bufI] = z; accX[bufI] = S.ax + gauss() * .01;
+  bufI = (bufI + 1) % BUF;
+}
+// posiciones de los recolectores relativas al camión y al contenedor
+function workerTargets(st) {
+  const tx = S.x, tz = ROAD_Z;
+  return {
+    ride: [V3(tx - 6.6, .8, tz + .55), V3(tx - 6.6, .8, tz - .55)],
+    ground: [V3(tx - 7.1, 0, tz + .9), V3(tx - 7.1, 0, tz - .3)],
+    pile: st ? [V3(st.x - .7, .22, 5.2), V3(st.x + .7, .22, 5.2)] : null,
+    hop: [V3(tx - 7.3, 0, tz + .7), V3(tx - 7.3, 0, tz - .2)]
+  };
+}
+const T = {down: .6, toPile: 2.2, carry: 3.6, toss: 4.0, compact: 6.0, back: 6.6, go: 6.8};
+function step(dt) {
+  S.simT += dt; S.dayT += dt;
+  const prevX = S.x;
+  if (S.mode === "drive") {
+    if (!S.target) S.target = nextTarget();
+    const dist = S.target.stopX - S.x;
+    const vWant = Math.min(VMAX, Math.sqrt(2 * ACC * Math.max(dist, 0)));
+    S.v = S.v < vWant ? Math.min(vWant, S.v + ACC * dt) : vWant;
+    S.x += S.v * dt;
+    if (S.target.stopX - S.x < .03) {
+      S.x = S.target.stopX; S.v = 0; S.t = 0;
+      if (S.target.st) {
+        S.mode = "stop";
+        log(`Acelerómetro: <b>parada de carga</b>${S.saidStop ? "" : ". Mientras está parado no saca fotos: el disparo es por distancia"}`, {evento: "parada", lon: lonOf(S.x)});
+        S.saidStop = true;
+      } else {
+        S.mode = "upload"; S.phase = "";
+        serverResults();
+        log(`Llega a la base. El temporizador mantiene los celulares prendidos y suben <b>${CAMS.front.count + CAMS.side.count}</b> fotos por Wi-Fi al servidor.`,
+          {evento: "subida_wifi"});
+        buildServer();
+      }
+    }
+  } else if (S.mode === "stop") {
+    S.t += dt;
+    const st = S.target.st, W = workerTargets(st), t = S.t;
+    const hopMid = W.hop[0].clone().lerp(W.hop[1], .5).add(V3(0, 1.1, 0));
+    if (t >= T.toPile && t < T.carry) {
+      const k = smooth((t - T.toPile) / (T.carry - T.toPile));
+      st.bag.position.lerpVectors(st.home, hopMid, k);
+    } else if (t >= T.carry && t < T.toss) {
+      const k = smooth((t - T.carry) / (T.toss - T.carry));
+      st.bag.position.lerpVectors(hopMid, V3(S.x - 6.4, 2.6, ROAD_Z), k);
+      st.bag.scale.setScalar(1 - .6 * k);
+    }
+    if (t >= T.toss) st.bag.visible = false;
+    const wasOn = compactOn;
+    compactOn = t > T.toss && t < T.compact;
+    if (compactOn && !wasOn) log("Acelerómetro: <b>ciclo de compactación</b>", {evento: "compactacion", lon: lonOf(S.x)});
+    blade.rotation.z = compactOn ? -Math.sin((t - T.toss) / (T.compact - T.toss) * Math.PI) * 1.3 : 0;
+    if (t > T.go) { S.mode = "drive"; S.target = null; compactOn = false; }
+  } else if (S.mode === "upload") {
+    S.t += dt;
+    const ph = S.t < UP.upload ? "upload" : S.t < UP.analyze ? "analyze" : "done";
+    if (ph !== S.phase) {
+      S.phase = ph;
+      if (ph === "analyze") log(`Servidor: RF-DETR analiza las fotos (los baches, por recortes con SAHI).`);
+      if (ph === "done") { applyMap(); log(`Servidor: ${S.results.length} objetos confirmados hoy (cada uno en 2 fotos o más).`, {evento: "analisis"}); }
+    }
+    if (S.t > UP.done) { S.day++; if (S.day > 4) resetAll(); else startDay(); }
+  }
+  const axNow = (S.v - lastV) / Math.max(dt, 1e-3) / 9.8; lastV = S.v;
+  S.ax += (axNow - S.ax) * Math.min(1, dt * 8);
+  truck.position.x = S.x;
+  S.bounce *= Math.exp(-dt * 7);
+  truck.position.y = Math.abs(Math.sin(S.simT * 38)) * S.bounce;
+  for (const w of wheels) w.rotation.z -= S.v * dt / .55;
+  if (S.mode === "drive") checkBumps(prevX);
+  S.odo += S.x > prevX ? S.x - prevX : 0;
+  while (S.odo >= S.nextShot) { S.nextShot += SHOT_M; shoot(); }
+  // recolectores
+  const st = S.mode === "stop" ? S.target.st : null, W = workerTargets(st), t = S.t;
+  workers.forEach((w, i) => {
+    let pos, carry = false;
+    if (!st) pos = W.ride[i];
+    else if (t < T.down) pos = W.ride[i].clone().lerp(W.ground[i], smooth(t / T.down));
+    else if (t < T.toPile) pos = W.ground[i].clone().lerp(W.pile[i], smooth((t - T.down) / (T.toPile - T.down)));
+    else if (t < T.carry) { pos = W.pile[i].clone().lerp(W.hop[i], smooth((t - T.toPile) / (T.carry - T.toPile))); carry = true; }
+    else if (t < T.compact) { pos = W.hop[i]; carry = t < T.toss; }
+    else pos = W.hop[i].clone().lerp(W.ride[i], smooth((t - T.compact) / (T.back - T.compact)));
+    placeWorker(w, pos, carry);
+  });
+  sampleAcc += dt;
+  while (sampleAcc > 1 / 30) { sample(); sampleAcc -= 1 / 30; }
+}
+
+// =====================================================================
+// Paneles 2D
+// =====================================================================
+function fitCanvas(c) {
+  const r = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * r) || c.height !== Math.round(h * r)) { c.width = Math.round(w * r); c.height = Math.round(h * r); }
+  const g = c.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0); return [g, w, h];
+}
+function drawLines(g, w, h, series, range) {
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = "#e3e8ec"; g.lineWidth = 1;
+  for (let k = -2; k <= 2; k++) { const y = h / 2 - k / 2 * h / 2 * .9; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  for (const [buf, col, start] of series) {
+    g.strokeStyle = col; g.lineWidth = 1.4; g.beginPath();
+    for (let i = 0; i < buf.length; i++) {
+      const v = buf[(start + i) % buf.length], x = i / (buf.length - 1) * w, y = h / 2 - Math.max(-range, Math.min(range, v)) / range * h / 2 * .9;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.stroke();
+  }
+}
+const chart = document.getElementById("chart");
+function drawChart() {
+  const [g, w, h] = fitCanvas(chart);
+  drawLines(g, w, h, [[accX, "#d64545", bufI], [accZ, "#1f6feb", bufI]], .6);
+  g.fillStyle = "#8a959e"; g.font = "10px system-ui";
+  g.fillText("+0,6 g", 3, 11); g.fillText("−0,6 g", 3, h - 3); g.fillText("últimos 10 s", w - 62, h - 3);
+}
+const colorOf = o => o.resolved !== undefined ? "#2e9e5b" : S.day - o.firstSeen >= 2 ? "#d64545" : "#d98a00";
+const mini = document.getElementById("mini");
+function drawMini() {
+  const [g, w, h] = fitCanvas(mini);
+  g.clearRect(0, 0, w, h);
+  const X = x => 10 + (x - START_X + 2) / (DEPOT_X + 12 - START_X + 2) * (w - 20), my = 60;
+  g.fillStyle = "#c9cdd1"; g.fillRect(8, my - 7, w - 16, 14);
+  g.fillStyle = "#e3e1da"; g.fillRect(8, my + 9, X(DEPOT_X - 12) - 8, 8);
+  for (const ix of INTERS) { g.fillStyle = "#c9cdd1"; g.fillRect(X(ix) - 3, 26, 6, 64); }
+  g.fillStyle = "#8d8676"; g.fillRect(X(DEPOT_X - 12), my - 15, X(DEPOT_X + 12) - X(DEPOT_X - 12), 30);
+  g.fillStyle = "#fff"; g.font = "9px system-ui"; g.fillText("base", X(DEPOT_X - 8), my + 3);
+  for (const o of OBJS) {
+    if (o.firstSeen === undefined) continue;
+    g.fillStyle = colorOf(o);
+    if (o.kind === "hole") g.fillRect(X(o.x) - 5, my - 5, 10, 10);
+    else { g.beginPath(); g.arc(X(o.x), my + 13, 5.5, 0, 7); g.fill(); }
+    if (o.resolved !== undefined) { g.fillStyle = "#1d2329"; g.font = "10px system-ui"; g.fillText(`${o.delay} d`, X(o.x) - 7, o.kind === "hole" ? my - 9 : my + 32); }
+  }
+  g.fillStyle = "#1f6feb"; g.fillRect(X(S.x) - 6, my - 3, 12, 6);
+  let lx = 8; g.font = "11px system-ui";
+  for (const [col, txt] of [["#d98a00", "pendiente"], ["#d64545", "2+ días"], ["#2e9e5b", "resuelto (días)"]]) {
+    g.fillStyle = col; g.beginPath(); g.arc(lx + 4, 10, 4, 0, 7); g.fill();
+    g.fillStyle = "#5b6670"; g.fillText(txt, lx + 11, 14); lx += 22 + g.measureText(txt).width;
+  }
+  g.fillStyle = "#5b6670"; g.fillText("■ bache (calle)   ● poda y residuos (vereda)", 8, h - 6);
+}
+function updateStats() {
+  const pend = OBJS.filter(o => o.firstSeen !== undefined && o.resolved === undefined), ok = OBJS.filter(o => o.resolved !== undefined);
+  document.getElementById("sFot").textContent = (CAMS.front.count + CAMS.side.count).toLocaleString("es-AR");
+  document.getElementById("sBac").textContent = pend.filter(o => o.kind === "hole").length;
+  document.getElementById("sPod").textContent = pend.filter(o => o.kind === "side").length;
+  document.getElementById("sRes").textContent = ok.length ? `${ok.length} · ${coma((ok.reduce((a, o) => a + o.delay, 0) / ok.length).toFixed(1))} d` : "–";
+}
+// panel del servidor
+const srv = document.getElementById("server");
+let srvEls = null;
+function buildServer() {
+  const nF = CAMS.front.count, nS = CAMS.side.count;
+  srv.innerHTML = `<h2>Servidor de la base</h2>
+    <div class="row"><span>Wi-Fi · celular adelante (1920×1080)</span><b id="upF"></b></div><div class="bar"><i id="barF"></i></div>
+    <div class="row"><span>Wi-Fi · celular costado (1280×720)</span><b id="upS"></b></div><div class="bar"><i id="barS"></i></div>
+    <div class="row"><span>Análisis con RF-DETR · baches por recortes (SAHI)</span><b id="anP"></b></div><div class="bar"><i id="barA" style="background:var(--warn)"></i></div>
+    <div id="thumbs"></div><p id="srvSum"></p>
+    <p class="note">El celular borra cada foto recién cuando el servidor confirma que llegó entera. En un turno real (~40 km) son ~16.000 fotos por celular, ~9 GB: por eso se sube por Wi-Fi y no por datos móviles.</p>`;
+  srvEls = {nF, nS, upF: srv.querySelector("#upF"), upS: srv.querySelector("#upS"), barF: srv.querySelector("#barF"), barS: srv.querySelector("#barS"),
+    anP: srv.querySelector("#anP"), barA: srv.querySelector("#barA"), thumbs: srv.querySelector("#thumbs"), sum: srv.querySelector("#srvSum"), shown: 0};
+}
+function drawThumb(o) {
+  const fig = document.createElement("figure"), c = document.createElement("canvas");
+  c.width = 384; c.height = 216;
+  const g = c.getContext("2d");
+  if (o.thumb) g.drawImage(o.thumb, 0, 0); else { g.fillStyle = "#ccd3da"; g.fillRect(0, 0, 384, 216); }
+  if (o.kind === "hole") { // recortes superpuestos de SAHI
+    g.strokeStyle = "rgba(255,255,255,.55)"; g.setLineDash([6, 5]); g.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) g.strokeRect(i * 118 + 4, j * 100 + 4, 140, 112);
+    g.setLineDash([]);
+  }
+  const b = o.snapBox;
+  if (b) {
+    const x0 = (b[0] + 1) / 2 * 384, x1 = (b[2] + 1) / 2 * 384, y0 = (1 - b[3]) / 2 * 216, y1 = (1 - b[1]) / 2 * 216;
+    const hh = Math.max(y1 - y0, 10), yy = y0 - (hh - (y1 - y0)) / 2;
+    g.strokeStyle = "#f2c230"; g.lineWidth = 4; g.strokeRect(x0, yy, x1 - x0, hh);
+    const txt = `${TYPES[o.type].yolo} ${o.conf}`;
+    g.font = "600 22px system-ui"; const tw = g.measureText(txt).width + 12;
+    g.fillStyle = "#f2c230"; g.fillRect(x0 - 2, Math.max(0, yy - 28), tw, 28);
+    g.fillStyle = "#1d2329"; g.fillText(txt, x0 + 4, Math.max(0, yy - 28) + 21);
+  }
+  fig.appendChild(c);
+  const cap = document.createElement("figcaption");
+  cap.textContent = `${TYPES[o.type].name}${o.kind === "hole" ? ` · gravedad ${o.sev}` : ""} · ${o.shotsToday} fotos`;
+  fig.appendChild(cap);
+  srvEls.thumbs.appendChild(fig);
+}
+function updateServer() {
+  if (!srvEls) return;
+  const t = S.t, kU = Math.min(1, t / UP.upload), kA = Math.max(0, Math.min(1, (t - UP.upload) / (UP.analyze - UP.upload)));
+  srvEls.upF.textContent = `${Math.round(srvEls.nF * kU)} / ${srvEls.nF} fotos`;
+  srvEls.upS.textContent = `${Math.round(srvEls.nS * kU)} / ${srvEls.nS} fotos`;
+  srvEls.barF.style.width = srvEls.barS.style.width = (kU * 100) + "%";
+  srvEls.barA.style.width = (kA * 100) + "%";
+  srvEls.anP.textContent = kA >= 1 ? "listo" : kA > 0 ? `${Math.round(kA * 100)} %` : "esperando";
+  const want = Math.ceil(kA * S.results.length);
+  while (srvEls.shown < want) drawThumb(S.results[srvEls.shown++]);
+  if (S.phase === "done" && S.mapSummary) {
+    const det = S.results.reduce((a, o) => a + o.shotsToday, 0);
+    srvEls.sum.textContent = `${srvEls.nF + srvEls.nS} fotos → ${det} detecciones → ${S.results.length} objetos. Mapa: ${S.mapSummary.nuevos} nuevos, ${S.mapSummary.resueltos} resueltos.`;
+  } else srvEls.sum.textContent = "";
+}
+// lo que se dibuja encima de la imagen de cada celular
+let aiPreview = false;
+function drawCamOverlay(g, key, rx, ry, rw, rh, stripY = ry + rh - 22, badgeY = ry + 6, full = false) {
+  const C = CAMS[key];
+  g.save(); g.beginPath(); g.rect(rx, ry, rw, rh); g.clip();
+  if (key === "front") { // franja útil de 4 a 9 m
+    const yAt = d => { tmpV.set(C.world.x + d, 0, ROAD_Z).project(C.cam); return ry + (1 - tmpV.y) / 2 * rh; };
+    const y4 = yAt(4), y9 = yAt(9);
+    g.fillStyle = "rgba(242,194,48,.12)"; g.fillRect(rx, y9, rw, y4 - y9);
+    g.strokeStyle = "rgba(242,194,48,.95)"; g.setLineDash([7, 5]); g.lineWidth = 1.5;
+    for (const y of [y4, y9]) { g.beginPath(); g.moveTo(rx, y); g.lineTo(rx + rw, y); g.stroke(); }
+    g.setLineDash([]);
+    g.font = "600 11px system-ui"; g.fillStyle = "#f2c230";
+    g.fillText("4 m", rx + rw - 30, y4 - 4); g.fillText("9 m", rx + rw - 30, y9 - 4);
+    g.fillText("zona útil del bache", rx + 8, y9 + 14);
+  }
+  if (aiPreview) {
+    const placed = [];
+    for (const o of OBJS) {
+      if (o.cam !== key || !present(o)) continue;
+      const b = projectBox(o, C.cam); if (!b) continue;
+      const x0 = rx + (b[0] + 1) / 2 * rw, x1 = rx + (b[2] + 1) / 2 * rw;
+      let y0 = ry + (1 - b[3]) / 2 * rh, y1 = ry + (1 - b[1]) / 2 * rh;
+      if (y1 - y0 < 8) { const m = (y0 + y1) / 2; y0 = m - 4; y1 = m + 4; }
+      g.strokeStyle = "#f2c230"; g.lineWidth = 2; g.setLineDash([6, 4]); g.strokeRect(x0, y0, x1 - x0, y1 - y0); g.setLineDash([]);
+      const txt = `${TYPES[o.type].yolo} ${o.conf}`;
+      g.font = "600 12px system-ui"; const tw = g.measureText(txt).width + 8;
+      let ly = Math.max(ry, y0 - 17);
+      while (placed.some(q => x0 < q[0] + q[2] && q[0] < x0 + tw && ly < q[1] + 17 && q[1] < ly + 17)) ly += 18;
+      placed.push([x0 - 1, ly, tw]);
+      g.fillStyle = "#f2c230"; g.fillRect(x0 - 1, ly, tw, 17);
+      g.fillStyle = "#1d2329"; g.fillText(txt, x0 + 3, ly + 13);
+    }
+    g.font = "600 11px system-ui"; const note = "Vista previa: la IA corre en el servidor, al volver a la base";
+    g.fillStyle = "rgba(29,35,41,.75)"; g.fillRect(rx + 6, badgeY, g.measureText(note).width + 12, 20);
+    g.fillStyle = "#fff"; g.fillText(note, rx + 12, badgeY + 14);
+  }
+  if (S.mode === "stop") {
+    g.font = "600 12px system-ui"; const t = "Camión parado: no saca fotos";
+    const tw = g.measureText(t).width + 14, yy = aiPreview ? badgeY + 26 : badgeY;
+    g.fillStyle = "rgba(214,69,69,.9)"; g.fillRect(rx + 6, yy, tw, 21);
+    g.fillStyle = "#fff"; g.fillText(t, rx + 13, yy + 15);
+  }
+  if (C.flash > 0) { g.fillStyle = `rgba(255,255,255,${C.flash * .45})`; g.fillRect(rx, ry, rw, rh); }
+  g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(rx, stripY, rw, 22);
+  g.fillStyle = "#fff"; g.font = "11px ui-monospace,Menlo,monospace";
+  g.fillText(full ? `FOTO ${C.count} · ${C.res} · DÍA ${S.day} ${hhmm()} · GPS ${LAT}, ${lonOf(S.x)} · ${(S.v * 3.6).toFixed(0)} km/h`
+    : `#${C.count} · ${hhmm()} · ${LAT}, ${lonOf(S.x)} · ${(S.v * 3.6).toFixed(0)} km/h`, rx + 24, stripY + 15);
+  g.fillStyle = C.flash > .3 ? "#ffffff" : "#ff4d4d";
+  g.beginPath(); g.arc(rx + 12, stripY + 11, 5, 0, 7); g.fill();
+  g.restore();
+}
+
+// =====================================================================
+// Modos, vistas y botones
+// =====================================================================
+const info = document.getElementById("info"), pips = document.getElementById("pips"), ov = document.getElementById("ov");
+const pipEls = {front: document.querySelector("#pipF .pimg"), side: document.querySelector("#pipS .pimg")};
+let mode = "ruta", view = "seguir", pipOn = true;
+const INFO = {
+  kit: `<h2>El kit por camión</h2><p>Dos celulares viejos, sin batería, alimentados por el camión. Girá el modelo con el mouse y usá «Armar» para verlo en la cabina.</p>
+    <table><tr><td>Celular adelante (en desuso)</td><td>baches</td></tr><tr><td>Celular costado (en desuso)</td><td>poda y residuos</td></tr>
+    <tr><td>2 soportes con sopapa</td><td>fijos, siempre en el mismo ángulo</td></tr>
+    <tr><td>Regulador 12/24 V → 4 V</td><td>reemplaza la batería</td></tr>
+    <tr><td>Kit de cableado de dashcam</td><td>60–90 min más en la base</td></tr>
+    <tr><td>Servidor en la base</td><td>uno para todos los camiones</td></tr></table>
+    <p style="margin:8px 0 0">Los celulares no corren la IA: solo sacan fotos. Así calientan mucho menos con el sol.</p>`,
+  sensores: `<h2>Qué hace cada sensor</h2><p>Cada sensor responde una pregunta distinta. La pregunta «¿qué hay?» la responde el servidor.</p>
+    <table><tr><td>Cámara</td><td>Fotos cada 2,5 m</td></tr><tr><td>GPS</td><td>¿Dónde? ¿Cuándo disparar?</td></tr>
+    <tr><td>Acelerómetro</td><td>¿Golpe de bache? ¿Paró?</td></tr><tr><td>Giroscopio</td><td>¿Se movió el soporte?</td></tr></table>
+    <canvas id="sensChart"></canvas>
+    <div class="legend"><span><i style="background:#d64545"></i>X</span><span><i style="background:#2e9e5b"></i>Y</span><span><i style="background:#1f6feb"></i>Z</span><span>gravedad que mide el acelerómetro mientras el celular gira</span></div>`
+};
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", 2400); }
+function setView(v) {
+  view = v;
+  document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v));
+  heatGroup.visible = v === "aerea";
+  if (v === "seguir") { camera.position.set(S.x - 10, 16, 17); controls.target.set(S.x + 3, .5, 3); }
+  if (v === "aerea") { camera.position.set(5, 85, 30); controls.target.set(5, 0, 2); }
+  if (mode === "ruta") scene.fog = v === "aerea" ? null : FOG;
+}
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+  const ruta = m === "ruta";
+  city.visible = truck.visible = objGroup.visible = ruta;
+  workers.forEach(w => w.g.visible = ruta);
+  kit.visible = m === "kit"; sens.visible = m === "sensores";
+  for (const id of ["panel", "miniwrap", "rutaBtns", "day"]) document.getElementById(id).style.display = ruta ? "" : "none";
+  document.getElementById("kitBtns").style.display = m === "kit" ? "" : "none";
+  info.style.display = ruta ? "none" : "block"; info.innerHTML = INFO[m] || "";
+  scene.background = ruta ? SKY : STUDIO; scene.fog = ruta ? FOG : null;
+  for (const C of Object.values(CAMS)) C.label.visible = ruta;
+  zoneLblF.visible = zoneLblS.visible = serverLabel.visible = ruta;
+  for (const o of OBJS) o.label.visible = false;
+  for (const k of KIT) k.l.visible = m === "kit";
+  for (const l of SENS_LBL) l.visible = m === "sensores";
+  if (ruta) setView(view);
+  else heatGroup.visible = false;
+  if (!ruta) { sun.position.set(8, 14, 10); sun.target.position.set(0, 0, 0); }
+  if (m === "kit") { camera.position.set(-2.6, 5.4, 13.5); controls.target.set(-2.6, 2.1, .6); }
+  if (m === "sensores") { camera.position.set(7.5, 6.5, 12); controls.target.set(0, 3.2, 0); }
+}
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
+document.getElementById("pip").onclick = e => { pipOn = !pipOn; e.target.classList.toggle("on", pipOn); };
+document.getElementById("ai").onclick = e => { aiPreview = !aiPreview; e.target.classList.toggle("on", aiPreview); };
+document.getElementById("pause").onclick = e => { S.paused = !S.paused; e.target.textContent = S.paused ? "Seguir" : "Pausa"; e.target.classList.toggle("on", S.paused); };
+document.getElementById("speed").onclick = e => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? .5 : 1; e.target.textContent = `${coma(S.speed)}x`; };
+document.getElementById("csv").onclick = () => {
+  const cols = ["dia", "hora", "evento", "clase", "confianza", "gravedad", "lat", "lon", "demora_dias"];
+  const csv = [cols.join(","), ...EVENTS.map(e => cols.map(c => e[c] ?? "").join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type: "text/csv"}));
+  a.download = "datos_simulados_camion.csv"; a.click();
+  toast(`Se descargaron ${EVENTS.length} eventos simulados`);
+};
+document.getElementById("explode").onclick = e => { explodeTarget = explodeTarget ? 0 : 1; e.target.textContent = explodeTarget ? "Armar" : "Despiezar"; };
+document.getElementById("loadGlb").onclick = () => document.getElementById("glbFile").click();
+document.getElementById("glbFile").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  new THREE.GLTFLoader().load(URL.createObjectURL(f), gltf => {
+    if (glbObj) kit.remove(glbObj);
+    glbObj = gltf.scene;
+    const bb = new THREE.Box3().setFromObject(glbObj), size = bb.getSize(new THREE.Vector3());
+    glbObj.scale.setScalar(4 / Math.max(size.x, size.y, size.z));
+    const bb2 = new THREE.Box3().setFromObject(glbObj), c = bb2.getCenter(new THREE.Vector3());
+    glbObj.position.set(-c.x - 6, -bb2.min.y, -c.z - 4);
+    glbObj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    kit.add(glbObj);
+    toast("Modelo cargado: aparece atrás a la izquierda");
+  }, undefined, err => toast("No se pudo abrir el modelo: " + err.message));
+};
+addEventListener("keydown", e => {
+  if (e.key === "h" || e.key === "H") document.body.classList.toggle("clean");
+  if (e.key === "p" || e.key === "P") document.getElementById("pip").click();
+  if (e.key === "i" || e.key === "I") document.getElementById("ai").click();
+  if (e.code === "Space") { e.preventDefault(); document.getElementById("pause").click(); }
+});
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// gráfico de sensores (modo 3): gravedad vista desde el celular
+const GBUF = 200, gx = new Float32Array(GBUF), gy = new Float32Array(GBUF), gz = new Float32Array(GBUF);
+let gI = 0;
+const gravLocal = new THREE.Vector3(), invQ = new THREE.Quaternion();
+
+// =====================================================================
+// Bucle principal
+// =====================================================================
+resetAll();
+setMode("ruta");
+drawCables();
+const clock = new THREE.Clock();
+let lastTruckX = S.x, screenT = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), .05), et = clock.elapsedTime;
+  const ruta = mode === "ruta", camView = ruta && (view === "front" || view === "side");
+  if (ruta) {
+    if (!S.paused) step(dt * S.speed);
+    const dx = S.x - lastTruckX;
+    if (view === "seguir") {
+      if (Math.abs(dx) > 30) { camera.position.set(S.x - 10, 16, 17); controls.target.set(S.x + 3, .5, 3); }
+      else { camera.position.x += dx; controls.target.x += dx; }
+    }
+    lastTruckX = S.x;
+    sun.position.set(S.x + 30, 55, 30); sun.target.position.set(S.x, 0, 0);
+    const flashing = S.mode === "stop" && Math.floor(et * 4) % 2 === 0;
+    for (const b of beacons) b.material.emissive.setHex(flashing ? 0xff8800 : 0x000000);
+    const up = S.mode === "upload";
+    wifiRings.forEach((r, i) => {
+      const k = (et * 1.2 + i / 3) % 1;
+      r.material.opacity = up && S.t < UP.upload ? (1 - k) * .9 : 0;
+      r.scale.setScalar(.6 + k * 2.2);
+    });
+    srvLed.material.emissive.setHex(up && Math.floor(et * 6) % 2 ? 0x2e9e5b : 0x000000);
+    serverLabel.visible = up && document.body.classList.contains("clean");
+    zoneLblF.visible = zoneLblS.visible = view !== "aerea" && !up;
+    for (const C of Object.values(CAMS)) C.label.visible = view !== "aerea";
+    for (const C of Object.values(CAMS)) C.flash = Math.max(0, C.flash - dt * 7);
+    screenT += dt;
+    if (screenT > .25) { screenT = 0; drawScreen(et, CAMS.front.count + CAMS.side.count, LAT, lonOf(S.x)); }
+    updatePhoneCams(true);
+    for (const o of OBJS) {
+      const mapped = o.firstSeen !== undefined;
+      if (view === "aerea") {
+        o.label.visible = mapped; o.heat.visible = mapped;
+        if (mapped) {
+          const age = S.day - o.firstSeen, done = o.resolved !== undefined;
+          o.heat.material.color.set(colorOf(o));
+          o.label.el.className = "lbl " + (done ? "ok" : age >= 2 ? "bad" : "det");
+          o.label.el.innerHTML = `<b>${TYPES[o.type].name}</b>${o.kind === "hole" ? " · " + o.sev : ""} · ${done ? `resuelto en ${o.delay} d` : `pendiente hace ${age} d`}`;
+          o.label.obj = null; o.label.pos = o.home; o.label.offset.set(0, 1, 0);
+        }
+      } else {
+        o.label.obj = o.obj; o.label.offset.set(0, o.kind === "hole" ? .9 : 2.2, 0);
+        o.label.visible = mapped && o.resolved === undefined && present(o) && !up;
+        if (o.label.visible) {
+          const age = S.day - o.firstSeen;
+          o.label.el.className = "lbl " + (age >= 2 ? "bad" : "det");
+          o.label.el.innerHTML = `<b>${TYPES[o.type].name}</b> · en el mapa hace ${age} día${age > 1 ? "s" : ""}${o.kind === "hole" ? " · " + o.sev : ""}`;
+        }
+      }
+    }
+    srv.style.display = up ? "block" : "none";
+    if (up) updateServer();
+  } else srv.style.display = "none";
+  if (mode === "kit") {
+    explodeT += (explodeTarget - explodeT) * Math.min(1, dt * 4);
+    for (const k of KIT) {
+      if (k.fixed) { k.l.visible = true; continue; }
+      const u = k.obj.userData;
+      k.obj.position.lerpVectors(u.as, u.ex, explodeT);
+      k.obj.quaternion.copy(u.qAs).slerp(u.qEx, explodeT);
+      k.l.visible = explodeT > .5;
+    }
+    cab.visible = explodeT < .6;
+    drawCables();
+    kit.rotation.y = Math.sin(et * .25) * .45;
+    screenT += dt; if (screenT > .5) { screenT = 0; drawScreen(et, 128, LAT, "-65.31000"); }
+  }
+  if (mode === "sensores") {
+    bigPhone.rotation.set(Math.sin(et * .8) * .25, Math.sin(et * .5) * .45, Math.sin(et * 1.1) * .15);
+    invQ.copy(bigPhone.quaternion).invert();
+    gravLocal.set(0, -1, 0).applyQuaternion(invQ);
+    gx[gI] = gravLocal.x; gy[gI] = gravLocal.y; gz[gI] = gravLocal.z; gI = (gI + 1) % GBUF;
+    const sc = document.getElementById("sensChart");
+    if (sc) { const [g, w, h] = fitCanvas(sc); drawLines(g, w, h, [[gx, "#d64545", gI], [gy, "#2e9e5b", gI], [gz, "#1f6feb", gI]], 1.1); }
+  }
+  controls.update();
+  // vista principal
+  const W = innerWidth, H = innerHeight;
+  renderer.shadowMap.needsUpdate = true;
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, W, H);
+  if (camView) setHelpers(false);
+  renderer.render(scene, camView ? CAMS[view].cam : camera);
+  setHelpers(true);
+  // ventanas con lo que ve cada celular
+  const [g] = fitCanvas(ov);
+  g.clearRect(0, 0, W, H);
+  const showPips = ruta && pipOn && !camView && view !== "aerea" && S.mode !== "upload";
+  pips.style.display = showPips ? "flex" : "none";
+  if (showPips) {
+    setHelpers(false);
+    for (const key of ["front", "side"]) {
+      const el = pipEls[key];
+      if (!el.offsetParent) continue;
+      const r = el.getBoundingClientRect();
+      renderer.setScissorTest(true);
+      renderer.setScissor(r.left, H - r.bottom, r.width, r.height);
+      renderer.setViewport(r.left, H - r.bottom, r.width, r.height);
+      renderer.render(scene, CAMS[key].cam);
+      renderer.setScissorTest(false);
+      drawCamOverlay(g, key, r.left, r.top, r.width, r.height);
+    }
+    setHelpers(true);
+  }
+  const clean = document.body.classList.contains("clean");
+  if (camView) drawCamOverlay(g, view, 0, 0, W, H, clean ? H - 22 : 96, clean ? 6 : 126, true);
+  labelLayer.style.display = camView ? "none" : "block";
+  updateLabels(camera);
+  if (ruta) { drawChart(); drawMini(); updateStats(); }
+}
+loop();
+</script>
+</body>
+</html>

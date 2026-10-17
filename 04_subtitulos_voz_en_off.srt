@@ -1,0 +1,77 @@
+1
+00:00:00,500 --> 00:00:07,500
+Hay un vehículo que pasa por todas las calles de Trelew,
+todos los días: el camión de la basura.
+
+2
+00:00:08,000 --> 00:00:15,000
+Y en esas calles hay baches y montones de poda
+que nadie registra.
+
+3
+00:00:15,000 --> 00:00:21,500
+El municipio se entera por los reclamos…
+cuando se entera.
+
+4
+00:00:22,000 --> 00:00:27,500
+Nuestra idea: dos celulares viejos, sin batería,
+conectados al camión.
+
+5
+00:00:27,500 --> 00:00:33,500
+Uno mira la calle, para los baches.
+El otro mira la vereda, para la poda.
+
+6
+00:00:34,000 --> 00:00:40,500
+Sacan una foto cada dos metros y medio,
+con su ubicación.
+
+7
+00:00:40,500 --> 00:00:45,500
+Si el camión para a cargar, no sacan nada.
+
+8
+00:00:45,500 --> 00:00:53,500
+Y el acelerómetro registra el golpe
+de la rueda en cada bache.
+
+9
+00:00:54,000 --> 00:01:00,500
+Al volver a la base, siguen prendidos una hora más
+y suben todo por wifi.
+
+10
+00:01:00,500 --> 00:01:06,500
+Ahí, un servidor analiza las fotos
+con inteligencia artificial.
+
+11
+00:01:06,500 --> 00:01:13,500
+El celular no hace ese trabajo:
+por eso no se calienta al sol.
+
+12
+00:01:14,000 --> 00:01:21,000
+Servicios Públicos ve en un mapa
+cada bache y cada montón, con foto y fecha,
+
+13
+00:01:21,000 --> 00:01:27,500
+y cuántos días tardó en resolverse.
+
+14
+00:01:28,000 --> 00:01:35,000
+Lo probamos en un auto:
+[X] kilómetros, [Y] fotos.
+
+15
+00:01:35,000 --> 00:01:47,000
+Y contamos a mano diez cuadras
+para medir cuánto acierta: [Z] por ciento.
+
+16
+00:01:48,500 --> 00:01:55,500
+El camión que ya pasa por todas las calles,
+ahora también las ve.

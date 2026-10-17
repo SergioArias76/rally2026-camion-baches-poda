@@ -1,0 +1,6 @@
+.DS_Store
+# videos y audio pesados: no se suben al repo
+clips/*
+!clips/.gitkeep
+musica/*
+!musica/.gitkeep
