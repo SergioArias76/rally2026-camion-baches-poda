@@ -133,7 +133,11 @@
     <button id="tri" class="on">Triángulo</button>
   </div>
   <div class="btns" id="kitBtns" style="display:none">
+    <button data-kit="basura" class="on">Camión de basura</button>
+    <button data-kit="carga">Camión de carga</button>
+    <span class="sep"></span>
     <button id="explode">Armar</button>
+    <button id="steps">Paso a paso</button>
     <button id="loadGlb">Cargar modelo 3D (.glb)</button>
     <input type="file" id="glbFile" accept=".glb,.gltf" hidden>
   </div>
@@ -863,15 +867,24 @@ const STOPS = STOP_XS.map(x => {
 // Kit
 // =====================================================================
 const kit = new THREE.Group(); kit.visible = false; scene.add(kit);
-const studioFloor = new THREE.Mesh(new THREE.CircleGeometry(11, 64), M(0xe3e7ea, {roughness: 1}));
+const studioFloor = new THREE.Mesh(new THREE.CircleGeometry(12, 64), M(0xe3e7ea, {roughness: 1}));
 studioFloor.rotation.x = -Math.PI / 2; kit.add(studioFloor);
-const KIT = [];
 const qYaw = a => new THREE.Quaternion().setFromAxisAngle(V3(0, 1, 0), a);
-function kitPart(obj, ex, as, html, lblY, qEx = qYaw(0), qAs = qEx) {
-  Object.assign(obj.userData, {ex, as, qEx, qAs});
-  obj.position.copy(ex); obj.quaternion.copy(qEx); kit.add(obj);
-  const l = makeLabel(html, "big"); l.obj = obj; l.offset.set(0, lblY, 0); KIT.push({obj, l});
+const qX = a => new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), a);
+const KITS = {};
+function newKit(key) {
+  const K = {key, g: new THREE.Group(), cab: new THREE.Group(), parts: [], cables: [], cableSpec: () => []};
+  K.g.add(K.cab); kit.add(K.g); KITS[key] = K; return K;
 }
+// una pieza: posición despiezada (ex) y armada (as); step = paso del armado en que se instala
+function kitPart(K, obj, step, ex, as, html, lblY, qEx = qYaw(0), qAs = qEx) {
+  Object.assign(obj.userData, {ex, as, qEx, qAs});
+  obj.position.copy(ex); obj.quaternion.copy(qEx); K.g.add(obj);
+  const l = makeLabel(html, "big"); l.obj = obj; l.offset.set(0, lblY, 0); l.visible = false;
+  const hl = new THREE.BoxHelper(obj, 0xf2c230); hl.visible = false; scene.add(hl);
+  const part = {obj, l, step, t: 1, hl}; K.parts.push(part); return part;
+}
+// --- piezas que se repiten ---
 function mountedPhone() { // celular apaisado en su soporte con sopapa
   const G = new THREE.Group(), blk = M(0x2b2d31, {roughness: .5});
   const p = makePhone(.9, 1.85, .09, true); p.rotation.z = Math.PI / 2; G.add(p);
@@ -880,64 +893,198 @@ function mountedPhone() { // celular apaisado en su soporte con sopapa
   const cup = cyl(.3, .34, .06, M(0x3a3d42, {roughness: .3}), 28); cup.position.set(0, 1.03, -.12); G.add(cup);
   return G;
 }
-const kitFront = mountedPhone(), kitSide = mountedPhone(), kitLeft = mountedPhone();
-kitPart(kitFront, V3(-1.0, 4.3, .8), V3(-.4, 2.55, -1.0),
-  "<b>Celular adelante · baches</b><small>En desuso y sin batería. Arriba al centro del parabrisas. Fotos de 1920 × 1080</small>", 1.5);
-kitPart(kitSide, V3(2.6, 2.9, .8), V3(2.95, 2.45, .1),
-  "<b>Celular derecho · vereda</b><small>En el vidrio del acompañante. Fotos de 1280 × 720: sirve el más viejo</small>", 1.5, qYaw(0), qYaw(-Math.PI / 2));
-kitPart(kitLeft, V3(-4.6, 2.9, .8), V3(-2.95, 2.45, .1),
-  "<b>Celular izquierdo · vereda de enfrente</b><small>Arriba en el vidrio del chofer, sin tapar el espejo. Mira a ~8 m, del otro lado de la calle</small>", 1.5, qYaw(0), qYaw(Math.PI / 2));
-const regulator = new THREE.Group();
-{ // regulador 12/24 V → 4 V que reemplaza la batería
-  regulator.add(box(.9, .26, .6, M(0x1f4f8b, {roughness: .5}), 0, 0, 0));
-  for (let i = 0; i < 6; i++) regulator.add(box(.04, .14, .56, M(0xb8bcc0, {metalness: .7, roughness: .3}), -.35 + i * .14, .2, 0));
-  regulator.add(box(.35, .06, .25, M(0xd8b04a, {metalness: .8, roughness: .3}), -.75, -.05, 0)); // batería falsa
-  kitPart(regulator, V3(-3.2, .9, 3.4), V3(-1.6, 1.13, .4),
-    "<b>Regulador 12/24 V → 4 V</b><small>Reemplaza la batería. Con una resistencia en el pin de temperatura, el celular arranca</small>", .9);
+function wireTube(pts, col, r = .025) { return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, r, 6), new THREE.MeshStandardMaterial({color: col, roughness: .5})); }
+function dummyBattery() { // batería falsa: va en el lugar de la batería y recibe los 4 V del regulador
+  const g = new THREE.Group(), gold = M(0xd8b04a, {metalness: .8, roughness: .3});
+  g.add(box(.72, 1.15, .06, M(0x2b2d31, {roughness: .6})));
+  g.add(box(.6, .5, .005, M(0xf2c230), 0, .15, .033));
+  for (const [x, lab] of [[-.2, "+"], [0, "T"], [.2, "−"]]) g.add(box(.1, .06, .02, gold, x, -.55, .04));
+  // resistencia en el pin de temperatura (T): el celular "cree" que tiene batería y arranca
+  const res = cyl(.035, .035, .22, M(0xd9c7a0), 10); res.rotation.z = Math.PI / 2; res.position.set(.12, -.42, .07); g.add(res);
+  for (let i = 0; i < 3; i++) { const band = cyl(.037, .037, .02, M([0xb5651d, 0x1d1d1d, 0xd64545][i]), 10); band.rotation.z = Math.PI / 2; band.position.set(.06 + i * .05, -.42, .07); g.add(band); }
+  g.add(wireTube([V3(-.2, -.58, .04), V3(-.25, -.8, .1), V3(-.1, -1.0, .15)], 0xd64545, .02));
+  g.add(wireTube([V3(.2, -.58, .04), V3(.25, -.8, .1), V3(.1, -1.0, .15)], 0x1d1d1d, .02));
+  return g;
 }
-const dashKit = new THREE.Group();
-{ // kit de cableado de dashcam con temporizador
-  dashKit.add(box(.75, .28, .45, M(0x16181b, {roughness: .4}), 0, 0, 0));
-  dashKit.add(box(.32, .12, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x1d7a45, emissiveIntensity: .8}), 0, .02, .235));
-  for (let i = 0; i < 3; i++) dashKit.add(box(.12, .08, .22, M(0xd64545), -.55 - i * .2, -.08, .45));
-  kitPart(dashKit, V3(2.4, .9, 3.4), V3(1.0, 1.13, .4),
-    "<b>Kit de cableado de dashcam</b><small>Temporizador de 60–90 min y corte por bajo voltaje: en la base siguen prendidos para subir las fotos</small>", .9);
+function regulatorBoard(outs) { // regulador DC-DC con disipador y borneras de salida
+  const g = new THREE.Group();
+  g.add(box(.95, .06, .62, M(0x1f4f8b, {roughness: .5})));
+  for (let i = 0; i < 6; i++) g.add(box(.04, .16, .3, M(0xb8bcc0, {metalness: .7, roughness: .3}), -.3 + i * .09, .11, -.1));
+  const ind = cyl(.12, .12, .12, M(0x2b2d31), 16); ind.position.set(.25, .09, -.1); g.add(ind);
+  for (const x of [.12, .38]) { const c = cyl(.06, .06, .18, M(0x1d1d1f), 12); c.position.set(x, .12, .18); g.add(c); }
+  g.add(box(.2, .12, .14, M(0x2e9e5b), -.38, .09, .22));                        // entrada 12/24 V
+  for (let i = 0; i < outs; i++) g.add(box(.14, .12, .14, M(0x2e9e5b), .42, .09, -.22 + i * .17)); // salidas 4 V
+  return g;
 }
-const kitServer = new THREE.Group();
-{ // servidor de la base (no va en el camión)
-  kitServer.add(box(.9, .32, .6, M(0xd64545, {roughness: .5}), 0, .16, 0));
-  kitServer.add(box(.9, .06, .6, M(0xf3f3ee), 0, .35, 0));
-  kitServer.add(box(.6, .14, .42, M(0x6d737a, {metalness: .4}), .9, .07, 0));
-  kitServer.add(box(.06, .06, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x2e9e5b}), -.3, .2, .31));
-  kitServer.position.set(-.6, 0, 5.2); kit.add(kitServer);
-  const l = makeLabel("<b>Servidor en la base · uno para todos</b><small>Mini PC o Raspberry Pi 5 con SSD. Recibe las fotos por Wi-Fi y corre la IA (RF-DETR)</small>", "big");
-  l.obj = kitServer; l.offset.set(0, .9, 0); KIT.push({obj: kitServer, l, fixed: true});
+function dashcamKit() { // temporizador con corte por bajo voltaje y sus 3 cables: batería, contacto y masa
+  const g = new THREE.Group();
+  g.add(box(.75, .28, .45, M(0x16181b, {roughness: .4})));
+  g.add(box(.32, .12, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x1d7a45, emissiveIntensity: .8}), 0, .02, .235));
+  const ends = [[0xff3b30, V3(-.9, -.1, .5), "fuse"], [0x2ecc71, V3(-.95, -.1, .15), "fuse"], [0x222222, V3(-.9, -.1, -.25), "ring"]];
+  for (const [col, end, kind] of ends) {
+    g.add(wireTube([V3(-.37, 0, end.z * .3), V3(-.6, -.05, end.z * .7), end], col));
+    if (kind === "fuse") g.add(box(.14, .1, .2, M(0xd64545), end.x - .07, end.y, end.z));
+    else { const r = new THREE.Mesh(new THREE.TorusGeometry(.05, .015, 6, 16), M(0xb8bcc0, {metalness: .8})); r.position.copy(end).add(V3(-.05, 0, 0)); g.add(r); }
+  }
+  return g;
 }
-// cabina de referencia: tablero, parabrisas y vidrio lateral
-const cab = new THREE.Group(); kit.add(cab);
-cab.add(box(6.4, .5, 2.2, M(0x3a3e42, {roughness: .7}), 0, .75, 0));
+function zipTies() { // precintos y caño corrugado
+  const g = new THREE.Group();
+  for (let i = 0; i < 6; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(.18, .012, 4, 20, Math.PI * 1.6), M(0xf3f3ee)); t.position.set(-.3 + i * .08, .2, 0); t.rotation.y = .3; g.add(t); }
+  const tube = cyl(.07, .07, 1.2, M(0x1d1d1f, {roughness: .7}), 12); tube.rotation.z = Math.PI / 2; tube.position.set(0, .05, .4); g.add(tube);
+  for (let i = 0; i < 14; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(.075, .012, 4, 14), M(0x2b2d31)); r.rotation.y = Math.PI / 2; r.position.set(-.55 + i * .085, .05, .4); g.add(r); }
+  return g;
+}
+function serverBox() {
+  const g = new THREE.Group();
+  g.add(box(.9, .32, .6, M(0xd64545, {roughness: .5}), 0, .16, 0));
+  g.add(box(.9, .06, .6, M(0xf3f3ee), 0, .35, 0));
+  g.add(box(.6, .14, .42, M(0x6d737a, {metalness: .4}), .9, .07, 0));
+  g.add(box(.06, .06, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x2e9e5b}), -.3, .2, .31));
+  return g;
+}
 const kitGlass = M(0x8fbcd8, {roughness: .05, metalness: .3, transparent: true, opacity: .25});
-cab.add(box(6.4, 2.9, .05, kitGlass, 0, 2.45, -1.15));
-cab.add(box(.05, 2.4, 2.2, kitGlass, 3.2, 2.2, 0));
-cab.add(box(.05, 2.4, 2.2, kitGlass, -3.2, 2.2, 0));
-for (const [w, h, d, x, y, z] of [[6.5, .12, .12, 0, 3.9, -1.15], [.12, 2.9, .12, -3.2, 2.45, -1.15], [.12, 2.9, .12, 3.2, 2.45, -1.15], [.12, .12, 2.3, 3.2, 3.4, 0], [.12, .12, 2.3, -3.2, 3.4, 0]])
-  cab.add(box(w, h, d, M(0xd5d8db), x, y, z));
-const cables = [];
-function drawCables() {
-  for (const c of cables) { kit.remove(c); c.geometry.dispose(); }
-  cables.length = 0;
-  const reg = regulator.position, dk = dashKit.position;
-  for (const [a, b] of [[reg.clone().add(V3(.45, 0, 0)), kitFront.position.clone().add(V3(.4, -.5, .1))],
-                        [reg.clone().add(V3(.45, .05, .1)), kitSide.position.clone().add(V3(0, -.5, .1))],
-                        [reg.clone().add(V3(-.3, .05, .1)), kitLeft.position.clone().add(V3(0, -.5, .1))],
-                        [dk.clone().add(V3(-.4, 0, 0)), reg.clone().add(V3(.45, -.05, -.1))]]) {
-    const mid = a.clone().lerp(b, .5); mid.y = Math.min(a.y, b.y) - .7;
+const WC = {timed: 0xff9f0a, usb: 0xffd60a};
+function drawKitCables(K) {
+  for (const c of K.cables) { K.g.remove(c); c.geometry.dispose(); }
+  K.cables.length = 0;
+  for (const [a, b, col, viaY] of K.cableSpec()) {
+    const mid = a.clone().lerp(b, .5); mid.y = viaY ?? Math.min(a.y, b.y) - .6;
     const curve = new THREE.CatmullRomCurve3([a, a.clone().lerp(mid, .4).add(V3(0, -.1, 0)), mid, b.clone().lerp(mid, .3), b]);
-    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 60, .03, 6), M(0x202124, {roughness: .5}));
-    kit.add(m); cables.push(m);
+    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 60, .03, 6), new THREE.MeshStandardMaterial({color: col, roughness: .5}));
+    K.g.add(m); K.cables.push(m);
   }
 }
+const at = (o, x, y, z) => o.position.clone().add(V3(x, y, z));
+
+// ---------- kit del camión de basura ----------
+{
+  const K = newKit("basura");
+  K.cam = [V3(-2.2, 5.4, 13.5), V3(-2.2, 2.1, .6)];
+  const front = mountedPhone(), right = mountedPhone(), left = mountedPhone();
+  K.p = {front, right, left};
+  kitPart(K, dummyBattery(), 1, V3(-5.6, 2.0, 2.4), V3(-.4, 2.55, -1.06),
+    "<b>1 · Batería falsa ×3</b><small>Va en el lugar de la batería y recibe 4 V. Una resistencia en el pin de temperatura hace que el celular arranque</small>", 1.2, qYaw(.3), qYaw(0));
+  kitPart(K, front, 2, V3(-1.6, 3.9, .8), V3(-.4, 2.55, -1.0),
+    "<b>2 · Celular adelante · baches</b><small>Arriba al centro del parabrisas. Fotos de 1920 × 1080</small>", 1.5);
+  kitPart(K, right, 2, V3(2.4, 3.0, .8), V3(2.95, 2.45, .1),
+    "<b>2 · Celular derecho · vereda</b><small>En el vidrio del acompañante. Fotos de 1280 × 720</small>", 1.5, qYaw(0), qYaw(-Math.PI / 2));
+  kitPart(K, left, 2, V3(-4.4, 3.4, .4), V3(-2.95, 2.45, .1),
+    "<b>2 · Celular izquierdo · vereda de enfrente</b><small>Arriba en el vidrio del chofer, sin tapar el espejo</small>", 1.5, qYaw(0), qYaw(Math.PI / 2));
+  const dk = dashcamKit(); K.p.dk = dk;
+  kitPart(K, dk, 3, V3(2.6, .9, 3.4), V3(1.0, 1.15, .4),
+    "<b>3 · Kit de cableado de dashcam</b><small>Rojo: batería permanente · verde: contacto (ACC) · negro: masa. Temporizador de 60–90 min y corte por bajo voltaje</small>", .9);
+  const reg = regulatorBoard(3); K.p.reg = reg;
+  kitPart(K, reg, 4, V3(-2.6, .8, 3.6), V3(-1.4, 1.05, .4),
+    "<b>4 · Regulador 12/24 V → 4 V</b><small>3 salidas, una por celular. Con disipador: no calienta</small>", .8);
+  kitPart(K, zipTies(), 4, V3(5.4, 2.0, .2), V3(.2, 1.05, .75),
+    "<b>4 · Precintos y caño corrugado</b><small>Los cables suben por los parantes y van sujetos: no cuelgan ni se enganchan</small>", .8);
+  const srv = serverBox();
+  kitPart(K, srv, 5, V3(-.4, 0, 5.4), V3(-.4, 0, 5.4),
+    "<b>5 · Servidor en la base · uno para todos</b><small>Mini PC o Raspberry Pi 5 con SSD. Recibe las fotos por Wi-Fi y corre la IA (RF-DETR)</small>", .9);
+  // cabina de referencia
+  K.cab.add(box(6.4, .5, 2.2, M(0x3a3e42, {roughness: .7}), 0, .75, 0));
+  K.cab.add(box(6.4, 2.9, .05, kitGlass, 0, 2.45, -1.15));
+  K.cab.add(box(.05, 2.4, 2.2, kitGlass, 3.2, 2.2, 0), box(.05, 2.4, 2.2, kitGlass, -3.2, 2.2, 0));
+  for (const [w, h, d, x, y, z] of [[6.5, .12, .12, 0, 3.9, -1.15], [.12, 2.9, .12, -3.2, 2.45, -1.15], [.12, 2.9, .12, 3.2, 2.45, -1.15], [.12, .12, 2.3, 3.2, 3.4, 0], [.12, .12, 2.3, -3.2, 3.4, 0]])
+    K.cab.add(box(w, h, d, M(0xd5d8db), x, y, z));
+  K.cableSpec = () => [
+    [at(dk, -.4, 0, 0), at(reg, .5, .1, 0), WC.timed],
+    [at(reg, .45, .1, -.2), at(front, .4, -.5, .1), WC.usb],
+    [at(reg, .45, .1, 0), at(right, 0, -.5, .1), WC.usb],
+    [at(reg, .45, .1, .2), at(left, 0, -.5, .1), WC.usb]
+  ];
+  K.steps = [
+    "Preparar cada celular: sacar la batería y poner la batería falsa con su resistencia. Probarlo en la mesa con una fuente: tiene que prenderse solo al recibir corriente y abrir la app (modo kiosco).",
+    "Pegar los 3 soportes: arriba al centro del parabrisas, en el vidrio del acompañante y en el del chofer, sin tapar el espejo.",
+    "Conectar el kit de dashcam en la fusiblera: rojo a un fusible con corriente permanente, verde a uno que se prende con el contacto, negro a masa del chasis.",
+    "Conectar el regulador al kit y llevar un cable a cada celular por los parantes y el techo, sujeto con precintos.",
+    "Probar: al dar contacto los 3 se prenden y sacan fotos; al apagar siguen 60–90 min y suben todo por Wi-Fi al servidor de la base."
+  ];
+  K.info = `<h2>Kit del camión de basura</h2><p>Tres celulares viejos, sin batería, alimentados por el camión. Ninguno corre la IA: solo sacan fotos.</p>
+    <table><tr><td>Celulares en desuso</td><td>3 (donados)</td></tr><tr><td>Batería falsa + resistencia</td><td>3</td></tr>
+    <tr><td>Soportes con sopapa</td><td>3</td></tr><tr><td>Kit de cableado de dashcam</td><td>1</td></tr>
+    <tr><td>Regulador 12/24 V → 4 V, 3 salidas</td><td>1</td></tr><tr><td>Cables, precintos, caño corrugado</td><td>—</td></tr>
+    <tr><td>Servidor en la base</td><td>1 para todos</td></tr></table>`;
+}
+
+// ---------- kit del camión de carga ----------
+{
+  const K = newKit("carga");
+  K.cam = [V3(-2.8, 5.8, 15), V3(-2.8, 1.8, .8)];
+  K.g.visible = false;
+  const front = mountedPhone(); K.p = {front};
+  kitPart(K, dummyBattery(), 1, V3(-4.2, 2.7, 2.0), V3(-3.0, 2.55, -.91),
+    "<b>1 · Batería falsa ×3</b><small>Igual que en el de basura: 4 V y una resistencia en el pin de temperatura</small>", 1.2, qYaw(.3), qYaw(0));
+  kitPart(K, front, 2, V3(-2.4, 4.0, .8), V3(-3.0, 2.55, -.85),
+    "<b>2 · Celular adelante · cámara</b><small>Arriba al centro del parabrisas. Es el único que saca fotos</small>", 1.5);
+  const dk = dashcamKit(); K.p.dk = dk;
+  kitPart(K, dk, 2, V3(-3.4, .5, 4.8), V3(-3.9, 1.15, .3),
+    "<b>2 · Kit de dashcam (24 V)</b><small>Rojo: batería · verde: contacto · negro: masa. Temporizador y corte por bajo voltaje</small>", .9);
+  const regC = regulatorBoard(1); K.p.regC = regC;
+  kitPart(K, regC, 2, V3(-2.0, 1.4, 2.6), V3(-2.3, 1.05, .35),
+    "<b>2 · Regulador de la cabina</b><small>24 V → 4 V para el celular de adelante</small>", .8);
+  const tube = zipTies(); tube.scale.set(2.4, 1, 1);
+  kitPart(K, tube, 3, V3(.6, .4, 4.4), V3(.9, .42, .62),
+    "<b>3 · Cable por el chasis, ~6 m</b><small>En caño corrugado y con precintos al larguero, lejos del escape</small>", .9);
+  const rearBox = new THREE.Group();
+  rearBox.add(box(.62, .42, .7, M(0xe0672b, {roughness: .6})));
+  const rb = regulatorBoard(2); rb.scale.setScalar(.55); rb.position.y = .24; rearBox.add(rb);
+  const gl = cyl(.045, .055, .09, M(0x1b1c1f), 12); gl.rotation.z = Math.PI / 2; gl.position.set(-.34, -.05, 0); rearBox.add(gl);
+  K.p.rearBox = rearBox;
+  kitPart(K, rearBox, 3, V3(2.2, 1.6, 2.2), V3(2.6, .9, 0),
+    "<b>3 · Regulador de atrás, en caja estanca</b><small>24 V → 4 V con 2 salidas, para los celulares de sensores</small>", .9);
+  const sensor = s => { const g = new THREE.Group(); g.add(makeSensorBox()); const ph = makePhone(.42, .86, .05, false); ph.rotation.x = -Math.PI / 2; ph.rotation.z = Math.PI / 2; ph.position.y = .04; ph.scale.setScalar(.95); g.add(ph); return g; };
+  const sL = sensor(-1), sR = sensor(1); K.p.sL = sL; K.p.sR = sR;
+  kitPart(K, sL, 4, V3(3.6, 2.4, 1.2), V3(4.2, .82, -1.0),
+    "<b>4 · Celular de sensores · izquierda</b><small>Sin cámara. Acostado en su caja estanca, atornillada firme al travesaño, sin gomas, cerca del eje</small>", .8);
+  kitPart(K, sR, 4, V3(4.4, 1.0, 3.6), V3(4.2, .82, 1.0),
+    "<b>4 · Celular de sensores · derecha</b><small>Igual que el izquierdo, del otro lado: así se sabe qué rueda cayó</small>", .8);
+  const srv = serverBox();
+  kitPart(K, srv, 5, V3(2.4, 0, 5.8), V3(2.4, 0, 5.8),
+    "<b>5 · Servidor en la base</b><small>El mismo que para los camiones de basura</small>", .9);
+  // cabina de referencia y un tramo del chasis
+  K.cab.add(box(3.2, .5, 2.0, M(0x3a3e42, {roughness: .7}), -3.0, .75, 0));
+  K.cab.add(box(3.2, 2.6, .05, kitGlass, -3.0, 2.3, -1.0));
+  for (const [w, h, d, x, y, z] of [[3.3, .12, .12, -3.0, 3.6, -1.0], [.12, 2.6, .12, -4.6, 2.3, -1.0], [.12, 2.6, .12, -1.4, 2.3, -1.0]]) K.cab.add(box(w, h, d, M(0xd5d8db), x, y, z));
+  for (const z of [-.5, .5]) K.cab.add(box(7.0, .22, .16, dark, 1.9, .55, z));     // largueros
+  K.cab.add(box(.16, .14, 2.4, dark, 4.2, .66, 0));                               // travesaño
+  for (const z of [-1.1, 1.1]) { const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(4.6, .55, z); K.cab.add(w); }
+  K.cableSpec = () => [
+    [at(dk, -.4, 0, 0), at(regC, -.45, .1, 0), WC.timed],
+    [at(regC, .45, .1, 0), at(front, .4, -.5, .1), WC.usb],
+    [at(dk, .3, -.1, 0), at(rearBox, -.35, 0, 0), WC.timed, .45],
+    [at(rearBox, .3, .1, -.2), at(sL, -.55, 0, 0), WC.usb],
+    [at(rearBox, .3, .1, .2), at(sR, -.55, 0, 0), WC.usb]
+  ];
+  K.steps = [
+    "Preparar los 3 celulares con su batería falsa y probarlos en la mesa: se prenden solos al recibir corriente.",
+    "En la cabina: el celular de adelante arriba del parabrisas, el kit de dashcam en la fusiblera (24 V) y el regulador de la cabina.",
+    "Llevar el cable por el chasis hasta atrás, en caño corrugado y con precintos, y montar el regulador de atrás en su caja estanca.",
+    "Atornillar las 2 cajas de sensores al travesaño, cerca del eje y sin gomas. El celular va acostado, con la tapa y su junta, y el cable entra por el prensacable.",
+    "Probar: dar contacto y pasar despacio por un bache conocido. El golpe tiene que verse en los 3 celulares, primero adelante y después atrás."
+  ];
+  K.info = `<h2>Kit del camión de carga</h2><p>Un celular con cámara adelante y dos de sensores atrás, que confirman lo que ve la cámara.</p>
+    <table><tr><td>Celulares en desuso</td><td>3 (donados)</td></tr><tr><td>Batería falsa + resistencia</td><td>3</td></tr>
+    <tr><td>Soporte con sopapa</td><td>1</td></tr><tr><td>Kit de cableado de dashcam (24 V)</td><td>1</td></tr>
+    <tr><td>Regulador de la cabina, 1 salida</td><td>1</td></tr><tr><td>Regulador de atrás en caja estanca, 2 salidas</td><td>1</td></tr>
+    <tr><td>Cajas estancas para los sensores</td><td>2</td></tr><tr><td>Cable ~6 m, caño corrugado, precintos</td><td>—</td></tr></table>`;
+}
+let kitKey = "basura", kitStep = 0;
 let explodeT = 1, explodeTarget = 1, glbObj = null;
+function kitInfoHtml() {
+  const K = KITS[kitKey];
+  return K.info + `<p style="margin:8px 0 4px"><b>Armado</b> · ${kitStep ? `paso ${kitStep} de ${K.steps.length}` : "usá «Paso a paso» para verlo pieza por pieza"}</p>
+    <ol style="margin:0;padding-left:18px;font-size:13px">${K.steps.map((t, i) => `<li style="margin:3px 0;${kitStep === i + 1 ? "font-weight:600;color:var(--ink)" : kitStep ? "color:#9aa3ab" : "color:var(--muted)"}">${t}</li>`).join("")}</ol>`;
+}
+function setKit(key) {
+  kitKey = key; kitStep = 0;
+  for (const K of Object.values(KITS)) K.g.visible = K.key === key;
+  document.querySelectorAll("[data-kit]").forEach(b => b.classList.toggle("on", b.dataset.kit === key));
+  const K = KITS[key]; camera.position.copy(K.cam[0]); controls.target.copy(K.cam[1]);
+  document.getElementById("steps").textContent = "Paso a paso";
+  if (mode === "kit") info.innerHTML = kitInfoHtml();
+}
 
 // =====================================================================
 // Sensores
@@ -1644,13 +1791,6 @@ const info = document.getElementById("info"), pips = document.getElementById("pi
 const pipEls = {front: document.querySelector("#pipF .pimg"), side: document.querySelector("#pipS .pimg"), left: document.querySelector("#pipL .pimg")};
 let mode = "ruta", view = "seguir", pipOn = true;
 const INFO = {
-  kit: `<h2>El kit por camión</h2><p>Tres celulares viejos, sin batería, alimentados por el camión. Girá el modelo con el mouse y usá «Armar» para verlo en la cabina.</p>
-    <table><tr><td>Celular adelante (en desuso)</td><td>baches</td></tr><tr><td>Celular derecho (en desuso)</td><td>poda en la vereda</td></tr><tr><td>Celular izquierdo (en desuso)</td><td>poda en la vereda de enfrente</td></tr>
-    <tr><td>3 soportes con sopapa</td><td>fijos, siempre en el mismo ángulo</td></tr>
-    <tr><td>Regulador 12/24 V → 4 V</td><td>reemplaza la batería</td></tr>
-    <tr><td>Kit de cableado de dashcam</td><td>60–90 min más en la base</td></tr>
-    <tr><td>Servidor en la base</td><td>uno para todos los camiones</td></tr></table>
-    <p style="margin:8px 0 0">Los celulares no corren la IA: solo sacan fotos. Así calientan mucho menos con el sol.</p>`,
   sensores: `<h2>Qué hace cada sensor</h2><p>Cada sensor responde una pregunta distinta. La pregunta «¿qué hay?» la responde el servidor.</p>
     <table><tr><td>Cámara</td><td>Fotos cada 2,5 m</td></tr><tr><td>GPS</td><td>¿Dónde? ¿Cuándo disparar?</td></tr>
     <tr><td>Acelerómetro</td><td>¿Golpe de bache? ¿Paró?</td></tr><tr><td>Giroscopio</td><td>¿Se movió el soporte?</td></tr></table>
@@ -1678,18 +1818,18 @@ function setMode(m) {
   document.getElementById("kitBtns").style.display = m === "kit" ? "" : "none";
   document.getElementById("cargaBtns").style.display = carga ? "" : "none";
   document.getElementById("cargoPanel").style.display = carga ? "block" : "none";
-  info.style.display = ruta || carga ? "none" : "block"; info.innerHTML = INFO[m] || "";
+  info.style.display = ruta || carga ? "none" : "block"; info.innerHTML = m === "kit" ? kitInfoHtml() : INFO[m] || "";
   scene.background = ruta || carga ? SKY : STUDIO; scene.fog = ruta || carga ? FOG : null;
   for (const C of Object.values(CAMS)) C.label.visible = ruta;
   zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = serverLabel.visible = ruta;
   for (const o of OBJS) o.label.visible = false;
-  for (const k of KIT) k.l.visible = m === "kit";
+  for (const K of Object.values(KITS)) for (const pt of K.parts) { pt.l.visible = false; pt.hl.visible = false; }
   for (const l of SENS_LBL) l.visible = m === "sensores";
   if (ruta) setView(view);
   else heatGroup.visible = false;
   if (!ruta && !carga) { sun.position.set(8, 14, 10); sun.target.position.set(0, 0, 0); }
   if (carga) { stepCargo(0); camera.position.set(CG.x - 13, 13, 17); controls.target.set(CG.x - .5, 1.5, 1.8); }
-  if (m === "kit") { camera.position.set(-2.6, 5.4, 13.5); controls.target.set(-2.6, 2.1, .6); }
+  if (m === "kit") { const K = KITS[kitKey]; camera.position.copy(K.cam[0]); controls.target.copy(K.cam[1]); }
   if (m === "sensores") { camera.position.set(7.5, 6.5, 12); controls.target.set(0, 3.2, 0); }
 }
 document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
@@ -1710,7 +1850,15 @@ document.getElementById("csv").onclick = () => {
   a.download = "datos_simulados_camion.csv"; a.click();
   toast(`Se descargaron ${EVENTS.length} eventos simulados`);
 };
-document.getElementById("explode").onclick = e => { explodeTarget = explodeTarget ? 0 : 1; e.target.textContent = explodeTarget ? "Armar" : "Despiezar"; };
+document.getElementById("explode").onclick = e => { explodeTarget = explodeTarget ? 0 : 1; kitStep = 0; e.target.textContent = explodeTarget ? "Armar" : "Despiezar"; document.getElementById("steps").textContent = "Paso a paso"; info.innerHTML = kitInfoHtml(); };
+document.getElementById("steps").onclick = e => {
+  const n = KITS[kitKey].steps.length;
+  kitStep = kitStep >= n ? 0 : kitStep + 1;
+  e.target.textContent = kitStep ? (kitStep < n ? `Paso ${kitStep + 1} →` : "Terminar") : "Paso a paso";
+  if (!kitStep) { explodeTarget = 1; document.getElementById("explode").textContent = "Armar"; }
+  info.innerHTML = kitInfoHtml();
+};
+document.querySelectorAll("[data-kit]").forEach(b => b.onclick = () => setKit(b.dataset.kit));
 document.getElementById("loadGlb").onclick = () => document.getElementById("glbFile").click();
 document.getElementById("glbFile").onchange = e => {
   const f = e.target.files[0]; if (!f) return;
@@ -1745,7 +1893,7 @@ const gravLocal = new THREE.Vector3(), invQ = new THREE.Quaternion();
 // =====================================================================
 resetAll();
 setMode("ruta");
-drawCables();
+drawKitCables(KITS.basura); drawKitCables(KITS.carga);
 const clock = new THREE.Clock();
 let lastTruckX = S.x, screenT = 0;
 function loop() {
@@ -1801,18 +1949,25 @@ function loop() {
     srv.style.display = up ? "block" : "none";
     if (up) updateServer();
   } else srv.style.display = "none";
+  for (const K of Object.values(KITS)) if (mode !== "kit" || K.key !== kitKey) for (const pt of K.parts) { pt.hl.visible = false; pt.l.visible = false; }
   if (mode === "kit") {
+    const K = KITS[kitKey];
     explodeT += (explodeTarget - explodeT) * Math.min(1, dt * 4);
-    for (const k of KIT) {
-      if (k.fixed) { k.l.visible = true; continue; }
-      const u = k.obj.userData;
-      k.obj.position.lerpVectors(u.as, u.ex, explodeT);
-      k.obj.quaternion.copy(u.qAs).slerp(u.qEx, explodeT);
-      k.l.visible = explodeT > .5;
+    for (const pt of K.parts) {
+      // paso a paso: lo de pasos anteriores ya está armado, lo del paso actual se arma y se resalta
+      const goal = kitStep ? (pt.step <= kitStep ? 0 : 1) : explodeTarget;
+      pt.t += (goal - pt.t) * Math.min(1, dt * 3);
+      const u = pt.obj.userData;
+      pt.obj.position.lerpVectors(u.as, u.ex, pt.t);
+      pt.obj.quaternion.copy(u.qAs).slerp(u.qEx, pt.t);
+      const cur = kitStep && pt.step === kitStep;
+      pt.l.visible = kitStep ? cur : pt.t > .5;
+      pt.hl.visible = !!cur && Math.floor(et * 3) % 2 === 0;
+      if (pt.hl.visible) pt.hl.update();
     }
-    cab.visible = explodeT < .6;
-    drawCables();
-    kit.rotation.y = Math.sin(et * .25) * .45;
+    K.cab.visible = kitStep > 0 || explodeT < .6;
+    drawKitCables(K);
+    kit.rotation.y = Math.sin(et * .25) * .3;
     screenT += dt; if (screenT > .5) { screenT = 0; drawScreen(et, 128, LAT, "-65.31000"); }
   }
   garbageWiring.set(xrayRuta && mode === "ruta" && view !== "aerea", camera.position.distanceTo(truck.position) < 16); garbageWiring.tick(dt);
