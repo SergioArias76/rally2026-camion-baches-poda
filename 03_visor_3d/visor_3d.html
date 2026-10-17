@@ -164,11 +164,12 @@
   <h2>Qué mide cada celular</h2>
   <table>
     <tr><td>Adelante centro</td><td>Baches en el carril, de 4 a 9 m</td></tr>
-    <tr><td>Adelante der. e izq.</td><td>Las dos veredas, mirando hacia adelante</td></tr>
+    <tr><td>Adelante der. e izq.</td><td>Las dos veredas, desde arriba de los vidrios laterales</td></tr>
     <tr><td>Atrás centro</td><td>El mismo carril desde atrás: segunda foto de cada bache, con otra luz</td></tr>
     <tr><td>Atrás der. e izq.</td><td>Las veredas desde el otro ángulo: lo que un auto tapa de frente, se ve de atrás</td></tr>
     <tr><td>Los 6</td><td>GPS y acelerómetro: el golpe en la cabina y en la caja, con la carga real</td></tr>
   </table>
+  <p><b>Por qué van arriba:</b> ven por encima de los autos estacionados, el bache se ve menos aplastado y la lente no se ensucia con el polvo de las ruedas. Atrás van en el marco fijo, no en las puertas.</p>
   <p>Con 6 celulares son ~22 GB por turno de ~40 km: por Wi-Fi tarda ~75 min, al límite del temporizador. Conviene Wi-Fi de 5 GHz en la base.</p>
   <h2>Registro</h2>
   <ul id="cargoLog" class="log"></ul>
@@ -997,6 +998,8 @@ const cargo = new THREE.Group(); cargo.visible = false; scene.add(cargo);
   cargo.add(box(.05, 2.6, .05, M(0x8a9199), -5.69, 2.65, 0));
   for (const z of [-.6, .6]) for (const y of [1.9, 3.3]) cargo.add(box(.06, .08, .3, M(0x7c8590, {metalness: .6}), -5.7, y, z));
   for (const z of [-1.1, 1.1]) cargo.add(box(.05, .18, .3, M(0xd64545, {emissive: 0x6a1010}), -5.7, 1.2, z));
+  cargo.add(box(.16, .24, 2.6, M(0x8a9199, {metalness: .5}), -5.76, 3.9, 0));          // marco fijo arriba de las puertas
+  for (const z of [-1.27, 1.27]) cargo.add(box(.16, 2.7, .08, M(0x8a9199, {metalness: .5}), -5.76, 2.65, z));
   const cTex = textTex(1024, 200, (g, w, h) => {
     g.fillStyle = "#1f5fa8"; g.fillRect(0, 140, w, 60);
     g.fillStyle = "#1d2329"; g.font = "700 62px system-ui"; g.fillText("TRANSPORTE DE CARGA", 40, 90);
@@ -1013,11 +1016,13 @@ for (const x of CARGO_AXLES) for (const z of [-1.1, 1.1]) {
 // los 6 celulares: 3 en el parabrisas y 3 en la cola, dentro de carcasas estancas
 const CC = [
   {key: "fc", name: "Adelante centro · baches", pos: V3(4.42, 3.45, 0), dir: V3(1, -.42, 0)},
-  {key: "fl", name: "Adelante izquierda · vereda de enfrente", pos: V3(4.4, 3.45, -1.0), dir: V3(.55, -.3, -1)},
-  {key: "fr", name: "Adelante derecha · vereda", pos: V3(4.4, 3.45, 1.0), dir: V3(.55, -.5, 1)},
-  {key: "rc", name: "Atrás centro · baches, 2.ª foto", pos: V3(-5.82, 3.75, 0), dir: V3(-1, -.5, 0), rear: true},
-  {key: "rl", name: "Atrás izquierda · vereda de enfrente", pos: V3(-5.82, 3.75, -1.0), dir: V3(-.55, -.3, -1), rear: true},
-  {key: "rr", name: "Atrás derecha · vereda", pos: V3(-5.82, 3.75, 1.0), dir: V3(-.55, -.5, 1), rear: true}
+  // los de los costados, arriba en los vidrios laterales (no en las esquinas del parabrisas, que tienen el parante)
+  {key: "fl", name: "Adelante izquierda · vereda de enfrente", pos: V3(3.75, 3.45, -1.18), dir: V3(.35, -.3, -1)},
+  {key: "fr", name: "Adelante derecha · vereda", pos: V3(3.75, 3.45, 1.18), dir: V3(.35, -.5, 1)},
+  // los de atrás, colgados del marco fijo de arriba: no de las puertas, que se abren para cargar
+  {key: "rc", name: "Atrás centro · baches, 2.ª foto", pos: V3(-5.86, 3.6, 0), dir: V3(-1, -.5, 0), rear: true},
+  {key: "rl", name: "Atrás izquierda · vereda de enfrente", pos: V3(-5.86, 3.6, -1.0), dir: V3(-.55, -.3, -1), rear: true},
+  {key: "rr", name: "Atrás derecha · vereda", pos: V3(-5.86, 3.6, 1.0), dir: V3(-.55, -.5, 1), rear: true}
 ];
 const cargoHelpers = [], cargoPhones = [];
 const frusMat = new THREE.LineBasicMaterial({color: 0xd4a514, transparent: true, opacity: .75});
@@ -1033,6 +1038,7 @@ for (const c of CC) {
     const h = new THREE.Group();
     h.add(box(.06, .56, .98, M(0xe0672b, {roughness: .6}), .12, 0, 0));
     h.add(box(.32, .05, 1.0, M(0xe0672b, {roughness: .6}), -.04, .3, 0));
+    h.add(box(.06, .1, .06, M(0x5d6166), .08, .34, 0));   // soporte al marco
     h.position.copy(c.pos); cargo.add(h);
   } else cargo.add(box(.08, .2, .08, dark, c.pos.x, 3.7, c.pos.z));
   c.cam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
@@ -1065,8 +1071,10 @@ const cargoWiring = buildWiring(cargo, [
   {col: WIRE.gnd, pts: [V3(3.7, 2.4, -.55), V3(3.4, 1.6, -.5), V3(3.0, .98, -.5)], n: 2},
   {col: WIRE.timed, pts: [V3(3.7, 2.45, -.55), V3(3.75, 2.5, -.1), V3(3.7, 2.45, .35)], n: 2},
   {col: WIRE.timed, rad: .035, n: 6, sp: .25, pts: [V3(3.7, 2.4, -.55), V3(3.2, 1.6, -.6), V3(2.4, 1.0, -.55), V3(0, .98, -.55), V3(-3, .98, -.55), V3(-4.9, .98, -.55), V3(-5.35, 1.05, -.2)]},
-  ...[0, -1.0, 1.0].map(z => ({col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.3, 2.6, z * .8), V3(4.42, 3.6, z), V3(4.42, 3.7, z), V3(4.42, 3.55, z)]})),
-  ...[0, -1.0, 1.0].map(z => ({col: WIRE.usb, rad: .022, pts: [V3(-5.35, 1.25, 0), V3(-5.72, 1.5, z * .9), V3(-5.74, 3.2, z), V3(-5.8, 3.6, z)]}))
+  {col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.3, 2.6, 0), V3(4.42, 3.6, 0), V3(4.42, 3.7, 0), V3(4.42, 3.55, 0)]},
+  ...[-1, 1].map(s => ({col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.0, 2.6, s), V3(4.1, 3.6, s * 1.2), V3(3.8, 3.72, s * 1.18), V3(3.75, 3.6, s * 1.18)]})),
+  // atrás: el cable sube por el parante fijo y sigue por el marco, nunca por la puerta
+  ...[0, -1.0, 1.0].map(z => { const s = z < 0 ? -1 : 1; return {col: WIRE.usb, rad: .022, pts: [V3(-5.35, 1.25, 0), V3(-5.74, 1.45, 1.2 * s), V3(-5.78, 3.7, 1.2 * s), V3(-5.8, 3.86, (1.2 * s + z) / 2), V3(-5.84, 3.75, z)]}; })
 ]);
 const cargoX = prepXray(cargo, [cargoWiring.g, ...cargoPhones, ...cargoHelpers]);
 let xrayCarga = false;
