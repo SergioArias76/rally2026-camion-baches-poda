@@ -9,19 +9,19 @@ Nombren los archivos con el bloque del guion, por ejemplo `02_bache_auto.mp4` o 
 |---|---|---|---|
 | 1 | Camión recolector pasando | De lejos, sin patentes ni caras. Si pueden, una toma de varios segundos mientras dobla una esquina. | El gancho / Cierre |
 | 2 | Bache visto desde un auto | Celular a la altura del parabrisas, mirando adelante y abajo, como lo vería el celular de adelante. Plano fijo de 5 s. | El problema |
-| 3 | Montón de poda en la vereda | Desde la ventanilla del acompañante, a 3 o 4 m, como lo vería el celular del costado. Hagan 2 o 3 lugares. | El problema |
+| 3 | Montón de poda en la vereda | Desde la ventanilla del acompañante, a 3 o 4 m, como lo vería el celular derecho. Hagan 2 o 3 lugares. Si pueden, uno de la vereda de enfrente desde la ventanilla del chofer, a ~8 m. | El problema |
 | 4 | Vecino junto a su montón (opcional) | Solo con permiso firmado. Plano medio, sin hablar a cámara. | El problema |
 
 **Consejos:** filmen a la mañana o a la tarde, cuando la luz es más linda. Celular horizontal y estable (apoyado o con las dos manos). Mínimo 1080p.
 
 ## 2. La prueba con el auto (viernes al mediodía)
 
-Es lo más valioso del video: muestra que el sistema funciona entero, con datos medidos. Necesitan **los dos celulares** y una salida de ~10 km.
+Es lo más valioso del video: muestra que el sistema funciona entero, con datos medidos. Necesitan **los tres celulares** y una salida de ~10 km.
 
 | # | Toma | Cómo |
 |---|---|---|
-| 5 | Montaje | Un celular arriba al centro del parabrisas (mirando la calle) y otro en el vidrio del acompañante (mirando la vereda). Filmen cómo los ponen. |
-| 6 | Vista desde el asiento de atrás | Se ven los dos celulares sacando fotos y la calle de fondo. 10 s mientras manejan despacio. |
+| 5 | Montaje | Un celular arriba al centro del parabrisas (mirando la calle), otro en el vidrio del acompañante (vereda derecha) y otro arriba en el vidrio del chofer (vereda de enfrente), sin tapar el espejo. Filmen cómo los ponen. |
+| 6 | Vista desde el asiento de atrás | Se ven los tres celulares sacando fotos y la calle de fondo. 10 s mientras manejan despacio. |
 | 7 | Pantalla de la app | Grabación de pantalla de cada celular con el contador de fotos subiendo. |
 | 8 | Fotos de ejemplo | Elijan 2 fotos seguidas de un mismo bache y 2 de un mismo montón: muestran que cada objeto sale en dos fotos. |
 | 9 | La subida | Los celulares conectándose al Wi-Fi y las fotos llegando a la computadora o al servidor. |
@@ -32,7 +32,7 @@ Es lo más valioso del video: muestra que el sistema funciona entero, con datos 
 
 | # | Toma | Cómo |
 |---|---|---|
-| 10 | Cajón con celulares viejos | Una mano saca dos. |
+| 10 | Cajón con celulares viejos | Una mano saca tres. |
 | 11 | El celular arranca solo | El celular sin batería, enchufado a la fuente: se prende solo y abre la app. Es la prueba de que funciona sin batería. Filmen de corrido, sin cortes. |
 | 12 | Regulador y kit de dashcam | Si los consiguieron, las piezas solas y después conectadas. |
 
@@ -78,7 +78,7 @@ Pueden escanear en 3D los materiales o un montón de poda con el celular y verlo
 
 Ya están en `fotos/capturas_visor_3d/`. Si quieren otras:
 
-- Recorrido con las dos ventanas de las cámaras.
+- Recorrido con las tres ventanas de las cámaras.
 - Cámara adelante con la zona útil y la vista previa de la IA.
 - El panel **Servidor de la base** con las fotos analizadas.
 - Vista aérea con los baches y montones por color.

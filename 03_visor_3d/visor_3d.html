@@ -51,10 +51,10 @@
   #miniwrap h2{font-size:12px;margin:0 0 4px;color:var(--muted);font-weight:600}
   #mini{display:block;width:340px;height:116px}
   #pips{position:fixed;left:12px;top:118px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-  .pip{width:340px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+  .pip{width:300px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.15)}
   .pip .ph{height:28px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);background:var(--card);display:flex;justify-content:space-between;gap:8px}
   .pip .ph b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-  .pip .pimg{margin:0 6px 6px;height:184px}
+  .pip .pimg{margin:0 6px 6px;height:162px}
   #server{position:fixed;left:12px;top:118px;width:440px;max-height:calc(100% - 300px);overflow:auto;background:var(--card);
     border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
   #server h2{font-size:15px;margin:0 0 8px}
@@ -78,7 +78,8 @@
   #toast{position:fixed;left:50%;top:126px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
   body.clean header,body.clean aside,body.clean #miniwrap,body.clean #info,body.clean #help{display:none!important}
   body.clean #pips,body.clean #server{top:12px}
-  @media (max-height:780px){#pipS{display:none}}
+  @media (max-height:860px){#pipL{display:none}}
+  @media (max-height:660px){#pipS{display:none}}
   @media (max-width:900px){aside{display:none}#info{width:auto;right:12px}#mini{width:260px}.pip{width:260px}.pip .pimg{height:139px}#server{width:auto;right:12px}}
 </style>
 </head>
@@ -86,7 +87,8 @@
 <div id="app"></div>
 <div id="pips">
   <div class="pip" id="pipF"><div class="ph"><span>Celular adelante · baches · 1920×1080</span><b id="cntF">foto 0</b></div><div class="pimg"></div></div>
-  <div class="pip" id="pipS"><div class="ph"><span>Celular costado · poda · 1280×720</span><b id="cntS">foto 0</b></div><div class="pimg"></div></div>
+  <div class="pip" id="pipS"><div class="ph"><span>Celular derecho · vereda · 1280×720</span><b id="cntS">foto 0</b></div><div class="pimg"></div></div>
+  <div class="pip" id="pipL"><div class="ph"><span>Celular izquierdo · vereda de enfrente</span><b id="cntL">foto 0</b></div><div class="pimg"></div></div>
 </div>
 <canvas id="ov"></canvas>
 <div id="labels"></div>
@@ -102,7 +104,8 @@
   <div class="btns" id="rutaBtns">
     <button data-view="seguir" class="on">Seguir camión</button>
     <button data-view="front">Cámara adelante</button>
-    <button data-view="side">Cámara costado</button>
+    <button data-view="side">Cámara derecha</button>
+    <button data-view="left">Cámara izquierda</button>
     <button data-view="aerea">Vista aérea</button>
     <button id="pip" class="on">Ventanas</button>
     <button id="ai">Vista previa IA</button>
@@ -125,7 +128,7 @@
   <div class="legend"><span><i style="background:#1f6feb"></i>Z: golpes de baches y compactadora</span><span><i style="background:#d64545"></i>X: frenado y arranque</span></div>
   <h2>Resultado</h2>
   <div class="stats">
-    <div class="stat"><div id="sFot">0</div><span>fotos hoy (2 celulares)</span></div>
+    <div class="stat"><div id="sFot">0</div><span>fotos hoy (3 celulares)</span></div>
     <div class="stat"><div id="sBac">0</div><span>baches pendientes</span></div>
     <div class="stat"><div id="sPod">0</div><span>poda y residuos pendientes</span></div>
     <div class="stat"><div id="sRes">–</div><span>resueltos · demora promedio</span></div>
@@ -310,7 +313,8 @@ const ROAD_Z = 1.8;          // carril del camión
 const INTERS = [-37, 30];    // esquinas
 const DEPOT_X = 100;         // base municipal
 const STOP_XS = [-56, 18, 52];        // contenedores donde el camión carga
-const SIDE_XS = [-46, -15, 8, 40, 64]; // montones en la vereda
+const SIDE_XS = [-46, -15, 8, 40, 64]; // montones en la vereda derecha
+const LEFT_XS = [-52, -5, 14, 56];     // montones en la vereda de enfrente
 const nearInter = (x, m) => INTERS.some(ix => Math.abs(x - ix) < m);
 
 const ground = box(520, .1, 360, M(0xa8936a), 0, -.06, 0); city.add(ground);
@@ -356,6 +360,7 @@ for (let x = -112; x < 84; x += 9.5) {
 for (let x = -110; x < 84; x += 7.5) {
   for (const s of [1, -1]) {
     if (nearInter(x, 6) || (s === 1 && (rnd() > .35 || [...SIDE_XS, ...STOP_XS].some(px => Math.abs(px - x) < 6)))) continue;
+    if (s === -1 && LEFT_XS.some(px => Math.abs(px - x) < 4)) continue;
     const t = new THREE.Group(), alamo = s === -1 && rnd() > .4;
     const tr = cyl(.12, .18, alamo ? 2.2 : 1.8, M(0x6b4f3a)); tr.position.y = alamo ? 1.1 : .9; t.add(tr);
     if (alamo) { const c = new THREE.Mesh(new THREE.ConeGeometry(.9, 6.5, 9), M(0x4f7a3f)); c.position.y = 4.8; t.add(c); }
@@ -406,7 +411,7 @@ function makeCar(col) {
   return g;
 }
 for (let x = -100; x < 80; x += 13 + rnd() * 10) {
-  if (nearInter(x, 7)) continue;
+  if (nearInter(x, 7) || LEFT_XS.some(px => Math.abs(px - x) < 4.5)) continue;
   const c = makeCar(carCols[Math.floor(rnd() * carCols.length)]);
   c.position.set(x, 0, -2.9); if (rnd() > .5) c.rotation.y = Math.PI; city.add(c);
 }
@@ -480,7 +485,7 @@ truck.add(box(6, 3.0, 2.5, white, -2.1, 2.5, 0));
 const sideTex = textTex(1024, 220, (g, w, h) => {
   g.fillStyle = "#2f8f5b"; g.fillRect(0, 150, w, 70);
   g.fillStyle = "#1d2329"; g.font = "700 64px system-ui"; g.fillText("RECOLECCIÓN DE RESIDUOS", 40, 90);
-  g.fillStyle = "#fff"; g.font = "600 40px system-ui"; g.fillText("Piloto · 2 celulares en desuso a bordo", 40, 198);
+  g.fillStyle = "#fff"; g.font = "600 40px system-ui"; g.fillText("Piloto · 3 celulares en desuso a bordo", 40, 198);
 });
 for (const s of [1, -1]) {
   const p = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 1.2), new THREE.MeshBasicMaterial({map: sideTex, transparent: true}));
@@ -538,11 +543,13 @@ for (const x of AXLES) for (const z of [-1.1, 1.1]) {
 truck.position.set(-80, 0, ROAD_Z);
 scene.add(truck);
 
-// los dos celulares: uno mira la calle (baches) y el otro la vereda (poda)
+// los tres celulares: uno mira la calle (baches) y los otros dos, las dos veredas (poda)
 // vista: 70° de ancho en 16:9 → 43° de alto
 const CAMS = {
   front: {pos: V3(3.0, 3.15, 0), dir: V3(1, -.42, 0).normalize(), title: "Celular adelante · baches", res: "1920 × 1080", count: 0, flash: 0},
-  side: {pos: V3(2.3, 3.1, 1.12), dir: V3(.05, -.6, 1).normalize(), title: "Celular costado · poda y residuos", res: "1280 × 720", count: 0, flash: 0}
+  side: {pos: V3(2.3, 3.1, 1.12), dir: V3(.05, -.6, 1).normalize(), title: "Celular derecho · vereda", res: "1280 × 720", count: 0, flash: 0, half: 2.4, snapHalf: 1.3},
+  // la vereda de enfrente está a ~8 m: mira menos hacia abajo y cada foto abarca ~11 m
+  left: {pos: V3(2.3, 3.1, -1.12), dir: V3(.05, -.33, -1).normalize(), title: "Celular izquierdo · vereda de enfrente", res: "1280 × 720", count: 0, flash: 0, half: 5, snapHalf: 1.5}
 };
 const helpers = []; // lo que no tiene que salir en las fotos
 for (const [key, C] of Object.entries(CAMS)) {
@@ -557,8 +564,8 @@ for (const [key, C] of Object.entries(CAMS)) {
   C.phone = ph; helpers.push(ph, arm);
   C.cam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
   C.world = new THREE.Vector3();
-  C.label = makeLabel(key === "front" ? "<b>Celular adelante</b> · baches" : "<b>Celular costado</b> · poda", "");
-  C.label.obj = ph; C.label.offset.set(0, .75, key === "side" ? .4 : 0);
+  C.label = makeLabel({front: "<b>Celular adelante</b> · baches", side: "<b>Celular derecho</b> · vereda", left: "<b>Celular izquierdo</b> · vereda de enfrente"}[key], "");
+  C.label.obj = ph; C.label.offset.copy({front: V3(0, 1.45, 0), side: V3(0, .75, .4), left: V3(-1.8, .6, -.4)}[key]);
 }
 // zonas que fotografía cada celular, marcadas en el piso
 const zoneMat = new THREE.MeshBasicMaterial({color: 0xf2c230, transparent: true, opacity: .22, depthWrite: false});
@@ -574,12 +581,15 @@ function zone(x0, x1, z0, z1, y, from) {
 }
 // adelante: de 4 a 9 m delante del celular, en el carril
 const frontZone = zone(CAMS.front.pos.x + 4, CAMS.front.pos.x + 9, -1.75, 1.75, .03, CAMS.front.pos);
-// costado: 5,6 m de vereda por foto (a ~4 m, con 70° de ancho)
+// derecho: 5,6 m de vereda por foto (a ~4 m, con 70° de ancho)
 const sideZone = zone(CAMS.side.pos.x - 2.8, CAMS.side.pos.x + 2.8, 2.35, 5.3, .25, CAMS.side.pos);
 const zoneLblF = makeLabel("Zona útil para baches: 4–9 m", "zone"); zoneLblF.obj = frontZone; zoneLblF.pos = null;
 zoneLblF.offset.set(CAMS.front.pos.x + 9, .1, 0);
 const zoneLblS = makeLabel("5,6 m de vereda por foto", "zone"); zoneLblS.obj = sideZone;
 zoneLblS.offset.set(CAMS.side.pos.x, .3, 5.3);
+const leftZone = zone(CAMS.left.pos.x - 5.5, CAMS.left.pos.x + 5.5, -8.6, -5.95, .25, CAMS.left.pos);
+const zoneLblL = makeLabel("11 m de vereda de enfrente por foto", "zone"); zoneLblL.obj = leftZone;
+zoneLblL.offset.set(CAMS.left.pos.x, .3, -8.6);
 function updatePhoneCams(fullAspect) {
   truck.updateMatrixWorld();
   for (const [key, C] of Object.entries(CAMS)) {
@@ -709,9 +719,16 @@ const SIDE = [
   {x: SIDE_XS[3], type: "escombro", appear: 1, end: 5},
   {x: SIDE_XS[4], type: "poda", appear: 3, end: 5}
 ];
+const LEFT = [
+  {x: LEFT_XS[0], type: "escombro", appear: 1, end: 4},
+  {x: LEFT_XS[1], type: "poda", appear: 1, end: 3},
+  {x: LEFT_XS[2], type: "bolsas", appear: 2, end: 5},
+  {x: LEFT_XS[3], type: "poda", appear: 1, end: 5}
+];
 const OBJS = [
   ...HOLES.map(h => Object.assign({kind: "hole", type: "bache", cam: "front"}, h)),
-  ...SIDE.map(s => Object.assign({kind: "side", z: 5.9, cam: "side"}, s))
+  ...SIDE.map(s => Object.assign({kind: "side", z: 5.9, cam: "side"}, s)),
+  ...LEFT.map(s => Object.assign({kind: "side", z: -5.9, cam: "left"}, s))
 ];
 const objGroup = new THREE.Group(); scene.add(objGroup);
 const heatGroup = new THREE.Group(); heatGroup.visible = false; scene.add(heatGroup);
@@ -763,17 +780,19 @@ function mountedPhone() { // celular apaisado en su soporte con sopapa
   const cup = cyl(.3, .34, .06, M(0x3a3d42, {roughness: .3}), 28); cup.position.set(0, 1.03, -.12); G.add(cup);
   return G;
 }
-const kitFront = mountedPhone(), kitSide = mountedPhone();
-kitPart(kitFront, V3(-2.6, 3.5, .8), V3(-.4, 2.55, -1.0),
+const kitFront = mountedPhone(), kitSide = mountedPhone(), kitLeft = mountedPhone();
+kitPart(kitFront, V3(-1.0, 4.3, .8), V3(-.4, 2.55, -1.0),
   "<b>Celular adelante · baches</b><small>En desuso y sin batería. Arriba al centro del parabrisas. Fotos de 1920 × 1080</small>", 1.5);
-kitPart(kitSide, V3(1.5, 3.5, .8), V3(2.95, 2.45, .1),
-  "<b>Celular costado · poda y residuos</b><small>En el vidrio del acompañante. Fotos de 1280 × 720: sirve el más viejo</small>", 1.5, qYaw(0), qYaw(-Math.PI / 2));
+kitPart(kitSide, V3(2.6, 2.9, .8), V3(2.95, 2.45, .1),
+  "<b>Celular derecho · vereda</b><small>En el vidrio del acompañante. Fotos de 1280 × 720: sirve el más viejo</small>", 1.5, qYaw(0), qYaw(-Math.PI / 2));
+kitPart(kitLeft, V3(-4.6, 2.9, .8), V3(-2.95, 2.45, .1),
+  "<b>Celular izquierdo · vereda de enfrente</b><small>Arriba en el vidrio del chofer, sin tapar el espejo. Mira a ~8 m, del otro lado de la calle</small>", 1.5, qYaw(0), qYaw(Math.PI / 2));
 const regulator = new THREE.Group();
 { // regulador 12/24 V → 4 V que reemplaza la batería
   regulator.add(box(.9, .26, .6, M(0x1f4f8b, {roughness: .5}), 0, 0, 0));
   for (let i = 0; i < 6; i++) regulator.add(box(.04, .14, .56, M(0xb8bcc0, {metalness: .7, roughness: .3}), -.35 + i * .14, .2, 0));
   regulator.add(box(.35, .06, .25, M(0xd8b04a, {metalness: .8, roughness: .3}), -.75, -.05, 0)); // batería falsa
-  kitPart(regulator, V3(-4.3, 1.3, 2.4), V3(-1.6, 1.13, .4),
+  kitPart(regulator, V3(-3.2, .9, 3.4), V3(-1.6, 1.13, .4),
     "<b>Regulador 12/24 V → 4 V</b><small>Reemplaza la batería. Con una resistencia en el pin de temperatura, el celular arranca</small>", .9);
 }
 const dashKit = new THREE.Group();
@@ -781,7 +800,7 @@ const dashKit = new THREE.Group();
   dashKit.add(box(.75, .28, .45, M(0x16181b, {roughness: .4}), 0, 0, 0));
   dashKit.add(box(.32, .12, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x1d7a45, emissiveIntensity: .8}), 0, .02, .235));
   for (let i = 0; i < 3; i++) dashKit.add(box(.12, .08, .22, M(0xd64545), -.55 - i * .2, -.08, .45));
-  kitPart(dashKit, V3(3.3, 1.3, 2.4), V3(1.0, 1.13, .4),
+  kitPart(dashKit, V3(2.4, .9, 3.4), V3(1.0, 1.13, .4),
     "<b>Kit de cableado de dashcam</b><small>Temporizador de 60–90 min y corte por bajo voltaje: en la base siguen prendidos para subir las fotos</small>", .9);
 }
 const kitServer = new THREE.Group();
@@ -790,7 +809,7 @@ const kitServer = new THREE.Group();
   kitServer.add(box(.9, .06, .6, M(0xf3f3ee), 0, .35, 0));
   kitServer.add(box(.6, .14, .42, M(0x6d737a, {metalness: .4}), .9, .07, 0));
   kitServer.add(box(.06, .06, .02, new THREE.MeshStandardMaterial({color: 0x2e9e5b, emissive: 0x2e9e5b}), -.3, .2, .31));
-  kitServer.position.set(-.8, 0, 4.4); kit.add(kitServer);
+  kitServer.position.set(-.6, 0, 5.2); kit.add(kitServer);
   const l = makeLabel("<b>Servidor en la base · uno para todos</b><small>Mini PC o Raspberry Pi 5 con SSD. Recibe las fotos por Wi-Fi y corre la IA (RF-DETR)</small>", "big");
   l.obj = kitServer; l.offset.set(0, .9, 0); KIT.push({obj: kitServer, l, fixed: true});
 }
@@ -800,7 +819,8 @@ cab.add(box(6.4, .5, 2.2, M(0x3a3e42, {roughness: .7}), 0, .75, 0));
 const kitGlass = M(0x8fbcd8, {roughness: .05, metalness: .3, transparent: true, opacity: .25});
 cab.add(box(6.4, 2.9, .05, kitGlass, 0, 2.45, -1.15));
 cab.add(box(.05, 2.4, 2.2, kitGlass, 3.2, 2.2, 0));
-for (const [w, h, d, x, y, z] of [[6.5, .12, .12, 0, 3.9, -1.15], [.12, 2.9, .12, -3.2, 2.45, -1.15], [.12, 2.9, .12, 3.2, 2.45, -1.15], [.12, .12, 2.3, 3.2, 3.4, 0]])
+cab.add(box(.05, 2.4, 2.2, kitGlass, -3.2, 2.2, 0));
+for (const [w, h, d, x, y, z] of [[6.5, .12, .12, 0, 3.9, -1.15], [.12, 2.9, .12, -3.2, 2.45, -1.15], [.12, 2.9, .12, 3.2, 2.45, -1.15], [.12, .12, 2.3, 3.2, 3.4, 0], [.12, .12, 2.3, -3.2, 3.4, 0]])
   cab.add(box(w, h, d, M(0xd5d8db), x, y, z));
 const cables = [];
 function drawCables() {
@@ -809,6 +829,7 @@ function drawCables() {
   const reg = regulator.position, dk = dashKit.position;
   for (const [a, b] of [[reg.clone().add(V3(.45, 0, 0)), kitFront.position.clone().add(V3(.4, -.5, .1))],
                         [reg.clone().add(V3(.45, .05, .1)), kitSide.position.clone().add(V3(0, -.5, .1))],
+                        [reg.clone().add(V3(-.3, .05, .1)), kitLeft.position.clone().add(V3(0, -.5, .1))],
                         [dk.clone().add(V3(-.4, 0, 0)), reg.clone().add(V3(.45, -.05, -.1))]]) {
     const mid = a.clone().lerp(b, .5); mid.y = Math.min(a.y, b.y) - .7;
     const curve = new THREE.CatmullRomCurve3([a, a.clone().lerp(mid, .4).add(V3(0, -.1, 0)), mid, b.clone().lerp(mid, .3), b]);
@@ -939,7 +960,7 @@ function snap(cam) {
   g.putImageData(img, 0, 0);
   return c;
 }
-// disparo: los dos celulares sacan una foto cada 2,5 m recorridos
+// disparo: los tres celulares sacan una foto cada 2,5 m recorridos
 function shoot() {
   updatePhoneCams(false);
   for (const C of Object.values(CAMS)) { C.count++; C.flash = 1; }
@@ -953,14 +974,16 @@ function shoot() {
       if (!o.thumb && d <= 7) { o.snapBox = projectBox(o, C.cam); o.thumb = snap(C.cam); }
     } else {
       const dx = Math.abs(o.x - C.world.x);
-      if (dx > 2.4) continue;
+      if (dx > C.half) continue;
       o.shotsToday++;
-      if (!o.thumb && dx <= 1.3) { o.snapBox = projectBox(o, C.cam); o.thumb = snap(C.cam); }
+      if (!o.thumb && dx <= C.snapHalf) { o.snapBox = projectBox(o, C.cam); o.thumb = snap(C.cam); }
     }
   }
   document.getElementById("cntF").textContent = `foto ${CAMS.front.count}`;
   document.getElementById("cntS").textContent = `foto ${CAMS.side.count}`;
+  document.getElementById("cntL").textContent = `foto ${CAMS.left.count}`;
 }
+const totalFotos = () => CAMS.front.count + CAMS.side.count + CAMS.left.count;
 // golpe de la rueda en un bache: lo registra el acelerómetro
 function checkBumps(prevX) {
   for (const o of OBJS) {
@@ -1041,7 +1064,7 @@ function step(dt) {
       } else {
         S.mode = "upload"; S.phase = "";
         serverResults();
-        log(`Llega a la base. El temporizador mantiene los celulares prendidos y suben <b>${CAMS.front.count + CAMS.side.count}</b> fotos por Wi-Fi al servidor.`,
+        log(`Llega a la base. El temporizador mantiene los celulares prendidos y suben <b>${totalFotos()}</b> fotos por Wi-Fi al servidor.`,
           {evento: "subida_wifi"});
         buildServer();
       }
@@ -1134,7 +1157,7 @@ function drawMini() {
   g.clearRect(0, 0, w, h);
   const X = x => 10 + (x - START_X + 2) / (DEPOT_X + 12 - START_X + 2) * (w - 20), my = 60;
   g.fillStyle = "#c9cdd1"; g.fillRect(8, my - 7, w - 16, 14);
-  g.fillStyle = "#e3e1da"; g.fillRect(8, my + 9, X(DEPOT_X - 12) - 8, 8);
+  g.fillStyle = "#e3e1da"; g.fillRect(8, my + 9, X(DEPOT_X - 12) - 8, 8); g.fillRect(8, my - 17, X(DEPOT_X - 12) - 8, 8);
   for (const ix of INTERS) { g.fillStyle = "#c9cdd1"; g.fillRect(X(ix) - 3, 26, 6, 64); }
   g.fillStyle = "#8d8676"; g.fillRect(X(DEPOT_X - 12), my - 15, X(DEPOT_X + 12) - X(DEPOT_X - 12), 30);
   g.fillStyle = "#fff"; g.font = "9px system-ui"; g.fillText("base", X(DEPOT_X - 8), my + 3);
@@ -1142,8 +1165,8 @@ function drawMini() {
     if (o.firstSeen === undefined) continue;
     g.fillStyle = colorOf(o);
     if (o.kind === "hole") g.fillRect(X(o.x) - 5, my - 5, 10, 10);
-    else { g.beginPath(); g.arc(X(o.x), my + 13, 5.5, 0, 7); g.fill(); }
-    if (o.resolved !== undefined) { g.fillStyle = "#1d2329"; g.font = "10px system-ui"; g.fillText(`${o.delay} d`, X(o.x) - 7, o.kind === "hole" ? my - 9 : my + 32); }
+    else { g.beginPath(); g.arc(X(o.x), o.z > 0 ? my + 13 : my - 13, 5.5, 0, 7); g.fill(); }
+    if (o.resolved !== undefined) { g.fillStyle = "#1d2329"; g.font = "10px system-ui"; g.fillText(`${o.delay} d`, X(o.x) - 7, o.kind === "hole" ? my + 4 : o.z > 0 ? my + 32 : my - 22); }
   }
   g.fillStyle = "#1f6feb"; g.fillRect(X(S.x) - 6, my - 3, 12, 6);
   let lx = 8; g.font = "11px system-ui";
@@ -1151,11 +1174,11 @@ function drawMini() {
     g.fillStyle = col; g.beginPath(); g.arc(lx + 4, 10, 4, 0, 7); g.fill();
     g.fillStyle = "#5b6670"; g.fillText(txt, lx + 11, 14); lx += 22 + g.measureText(txt).width;
   }
-  g.fillStyle = "#5b6670"; g.fillText("■ bache (calle)   ● poda y residuos (vereda)", 8, h - 6);
+  g.fillStyle = "#5b6670"; g.fillText("■ bache (calle)   ● poda y residuos (las dos veredas)", 8, h - 6);
 }
 function updateStats() {
   const pend = OBJS.filter(o => o.firstSeen !== undefined && o.resolved === undefined), ok = OBJS.filter(o => o.resolved !== undefined);
-  document.getElementById("sFot").textContent = (CAMS.front.count + CAMS.side.count).toLocaleString("es-AR");
+  document.getElementById("sFot").textContent = totalFotos().toLocaleString("es-AR");
   document.getElementById("sBac").textContent = pend.filter(o => o.kind === "hole").length;
   document.getElementById("sPod").textContent = pend.filter(o => o.kind === "side").length;
   document.getElementById("sRes").textContent = ok.length ? `${ok.length} · ${coma((ok.reduce((a, o) => a + o.delay, 0) / ok.length).toFixed(1))} d` : "–";
@@ -1164,14 +1187,15 @@ function updateStats() {
 const srv = document.getElementById("server");
 let srvEls = null;
 function buildServer() {
-  const nF = CAMS.front.count, nS = CAMS.side.count;
+  const nF = CAMS.front.count, nS = CAMS.side.count, nL = CAMS.left.count;
   srv.innerHTML = `<h2>Servidor de la base</h2>
     <div class="row"><span>Wi-Fi · celular adelante (1920×1080)</span><b id="upF"></b></div><div class="bar"><i id="barF"></i></div>
-    <div class="row"><span>Wi-Fi · celular costado (1280×720)</span><b id="upS"></b></div><div class="bar"><i id="barS"></i></div>
+    <div class="row"><span>Wi-Fi · celular derecho (1280×720)</span><b id="upS"></b></div><div class="bar"><i id="barS"></i></div>
+    <div class="row"><span>Wi-Fi · celular izquierdo (1280×720)</span><b id="upL"></b></div><div class="bar"><i id="barL"></i></div>
     <div class="row"><span>Análisis con RF-DETR · baches por recortes (SAHI)</span><b id="anP"></b></div><div class="bar"><i id="barA" style="background:var(--warn)"></i></div>
     <div id="thumbs"></div><p id="srvSum"></p>
-    <p class="note">El celular borra cada foto recién cuando el servidor confirma que llegó entera. En un turno real (~40 km) son ~16.000 fotos por celular, ~9 GB: por eso se sube por Wi-Fi y no por datos móviles.</p>`;
-  srvEls = {nF, nS, upF: srv.querySelector("#upF"), upS: srv.querySelector("#upS"), barF: srv.querySelector("#barF"), barS: srv.querySelector("#barS"),
+    <p class="note">El celular borra cada foto recién cuando el servidor confirma que llegó entera. En un turno real (~40 km) son ~16.000 fotos por celular, ~11 GB entre los tres: por eso se sube por Wi-Fi y no por datos móviles.</p>`;
+  srvEls = {nF, nS, nL, upL: srv.querySelector("#upL"), barL: srv.querySelector("#barL"), upF: srv.querySelector("#upF"), upS: srv.querySelector("#upS"), barF: srv.querySelector("#barF"), barS: srv.querySelector("#barS"),
     anP: srv.querySelector("#anP"), barA: srv.querySelector("#barA"), thumbs: srv.querySelector("#thumbs"), sum: srv.querySelector("#srvSum"), shown: 0};
 }
 function drawThumb(o) {
@@ -1205,14 +1229,15 @@ function updateServer() {
   const t = S.t, kU = Math.min(1, t / UP.upload), kA = Math.max(0, Math.min(1, (t - UP.upload) / (UP.analyze - UP.upload)));
   srvEls.upF.textContent = `${Math.round(srvEls.nF * kU)} / ${srvEls.nF} fotos`;
   srvEls.upS.textContent = `${Math.round(srvEls.nS * kU)} / ${srvEls.nS} fotos`;
-  srvEls.barF.style.width = srvEls.barS.style.width = (kU * 100) + "%";
+  srvEls.upL.textContent = `${Math.round(srvEls.nL * kU)} / ${srvEls.nL} fotos`;
+  srvEls.barF.style.width = srvEls.barS.style.width = srvEls.barL.style.width = (kU * 100) + "%";
   srvEls.barA.style.width = (kA * 100) + "%";
   srvEls.anP.textContent = kA >= 1 ? "listo" : kA > 0 ? `${Math.round(kA * 100)} %` : "esperando";
   const want = Math.ceil(kA * S.results.length);
   while (srvEls.shown < want) drawThumb(S.results[srvEls.shown++]);
   if (S.phase === "done" && S.mapSummary) {
     const det = S.results.reduce((a, o) => a + o.shotsToday, 0);
-    srvEls.sum.textContent = `${srvEls.nF + srvEls.nS} fotos → ${det} detecciones → ${S.results.length} objetos. Mapa: ${S.mapSummary.nuevos} nuevos, ${S.mapSummary.resueltos} resueltos.`;
+    srvEls.sum.textContent = `${srvEls.nF + srvEls.nS + srvEls.nL} fotos → ${det} detecciones → ${S.results.length} objetos. Mapa: ${S.mapSummary.nuevos} nuevos, ${S.mapSummary.resueltos} resueltos.`;
   } else srvEls.sum.textContent = "";
 }
 // lo que se dibuja encima de la imagen de cada celular
@@ -1272,12 +1297,12 @@ function drawCamOverlay(g, key, rx, ry, rw, rh, stripY = ry + rh - 22, badgeY = 
 // Modos, vistas y botones
 // =====================================================================
 const info = document.getElementById("info"), pips = document.getElementById("pips"), ov = document.getElementById("ov");
-const pipEls = {front: document.querySelector("#pipF .pimg"), side: document.querySelector("#pipS .pimg")};
+const pipEls = {front: document.querySelector("#pipF .pimg"), side: document.querySelector("#pipS .pimg"), left: document.querySelector("#pipL .pimg")};
 let mode = "ruta", view = "seguir", pipOn = true;
 const INFO = {
-  kit: `<h2>El kit por camión</h2><p>Dos celulares viejos, sin batería, alimentados por el camión. Girá el modelo con el mouse y usá «Armar» para verlo en la cabina.</p>
-    <table><tr><td>Celular adelante (en desuso)</td><td>baches</td></tr><tr><td>Celular costado (en desuso)</td><td>poda y residuos</td></tr>
-    <tr><td>2 soportes con sopapa</td><td>fijos, siempre en el mismo ángulo</td></tr>
+  kit: `<h2>El kit por camión</h2><p>Tres celulares viejos, sin batería, alimentados por el camión. Girá el modelo con el mouse y usá «Armar» para verlo en la cabina.</p>
+    <table><tr><td>Celular adelante (en desuso)</td><td>baches</td></tr><tr><td>Celular derecho (en desuso)</td><td>poda en la vereda</td></tr><tr><td>Celular izquierdo (en desuso)</td><td>poda en la vereda de enfrente</td></tr>
+    <tr><td>3 soportes con sopapa</td><td>fijos, siempre en el mismo ángulo</td></tr>
     <tr><td>Regulador 12/24 V → 4 V</td><td>reemplaza la batería</td></tr>
     <tr><td>Kit de cableado de dashcam</td><td>60–90 min más en la base</td></tr>
     <tr><td>Servidor en la base</td><td>uno para todos los camiones</td></tr></table>
@@ -1309,7 +1334,7 @@ function setMode(m) {
   info.style.display = ruta ? "none" : "block"; info.innerHTML = INFO[m] || "";
   scene.background = ruta ? SKY : STUDIO; scene.fog = ruta ? FOG : null;
   for (const C of Object.values(CAMS)) C.label.visible = ruta;
-  zoneLblF.visible = zoneLblS.visible = serverLabel.visible = ruta;
+  zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = serverLabel.visible = ruta;
   for (const o of OBJS) o.label.visible = false;
   for (const k of KIT) k.l.visible = m === "kit";
   for (const l of SENS_LBL) l.visible = m === "sensores";
@@ -1373,7 +1398,7 @@ let lastTruckX = S.x, screenT = 0;
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), .05), et = clock.elapsedTime;
-  const ruta = mode === "ruta", camView = ruta && (view === "front" || view === "side");
+  const ruta = mode === "ruta", camView = ruta && view in CAMS;
   if (ruta) {
     if (!S.paused) step(dt * S.speed);
     const dx = S.x - lastTruckX;
@@ -1393,11 +1418,11 @@ function loop() {
     });
     srvLed.material.emissive.setHex(up && Math.floor(et * 6) % 2 ? 0x2e9e5b : 0x000000);
     serverLabel.visible = up && document.body.classList.contains("clean");
-    zoneLblF.visible = zoneLblS.visible = view !== "aerea" && !up;
+    zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = view !== "aerea" && !up;
     for (const C of Object.values(CAMS)) C.label.visible = view !== "aerea";
     for (const C of Object.values(CAMS)) C.flash = Math.max(0, C.flash - dt * 7);
     screenT += dt;
-    if (screenT > .25) { screenT = 0; drawScreen(et, CAMS.front.count + CAMS.side.count, LAT, lonOf(S.x)); }
+    if (screenT > .25) { screenT = 0; drawScreen(et, totalFotos(), LAT, lonOf(S.x)); }
     updatePhoneCams(true);
     for (const o of OBJS) {
       const mapped = o.firstSeen !== undefined;
@@ -1461,7 +1486,7 @@ function loop() {
   pips.style.display = showPips ? "flex" : "none";
   if (showPips) {
     setHelpers(false);
-    for (const key of ["front", "side"]) {
+    for (const key of ["front", "side", "left"]) {
       const el = pipEls[key];
       if (!el.offsetParent) continue;
       const r = el.getBoundingClientRect();

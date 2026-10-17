@@ -15,13 +15,13 @@ cuando se entera.
 
 4
 00:00:22,000 --> 00:00:27,500
-Nuestra idea: dos celulares viejos, sin batería,
+Nuestra idea: tres celulares viejos, sin batería,
 conectados al camión.
 
 5
 00:00:27,500 --> 00:00:33,500
-Uno mira la calle, para los baches.
-El otro mira la vereda, para la poda.
+Uno mira la calle, para los baches. Los otros dos
+miran las dos veredas, para la poda.
 
 6
 00:00:34,000 --> 00:00:40,500
