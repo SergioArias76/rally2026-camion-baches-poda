@@ -44,9 +44,9 @@
   .stat{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:#fff}
   .stat div{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
   .stat span{font-size:12px;color:var(--muted)}
-  #log{list-style:none;margin:0;padding:0;font-size:12px;max-height:200px;overflow:auto}
-  #log li{padding:3px 0;border-bottom:1px solid var(--line)}
-  #log li em{font-style:normal;color:var(--muted)}
+  #log,.log{list-style:none;margin:0;padding:0;font-size:12px;max-height:200px;overflow:auto}
+  #log li,.log li{padding:3px 0;border-bottom:1px solid var(--line)}
+  #log li em,.log li em{font-style:normal;color:var(--muted)}
   #miniwrap{position:fixed;left:12px;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
   #miniwrap h2{font-size:12px;margin:0 0 4px;color:var(--muted);font-weight:600}
   #mini{display:block;width:340px;height:116px}
@@ -78,6 +78,17 @@
   #toast{position:fixed;left:50%;top:126px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
   body.clean header,body.clean aside,body.clean #miniwrap,body.clean #info,body.clean #help{display:none!important}
   body.clean #pips,body.clean #server{top:12px}
+  #mosaic{position:fixed;left:12px;top:118px;display:none;grid-template-columns:repeat(2,214px);gap:6px;pointer-events:none}
+  #mosaic .cell{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:transparent}
+  #mosaic .cell div:first-child{height:22px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--muted);background:var(--card);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mosaic .mimg{height:120px}
+  #cargoPanel{display:none}
+  #cargoChart{width:100%;height:120px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
+  #cargoPanel table{width:100%;border-collapse:collapse;font-size:12px}
+  #cargoPanel td{border-top:1px solid var(--line);padding:3px 2px;vertical-align:top}
+  #cargoPanel td:first-child{font-weight:600;white-space:nowrap;padding-right:6px}
+  #cargoPanel p{font-size:12px;color:var(--muted);margin:4px 0}
+  .lbl.xr{border-color:#ff9f0a;background:#fff4e0}
   @media (max-height:860px){#pipL{display:none}}
   @media (max-height:660px){#pipS{display:none}}
   @media (max-width:900px){aside{display:none}#info{width:auto;right:12px}#mini{width:260px}.pip{width:260px}.pip .pimg{height:139px}#server{width:auto;right:12px}}
@@ -99,6 +110,7 @@
     <button data-mode="ruta" class="on">1 · Recorrido</button>
     <button data-mode="kit">2 · Kit</button>
     <button data-mode="sensores">3 · Sensores</button>
+    <button data-mode="carga">4 · Camión de carga</button>
   </div>
   <span class="sep"></span>
   <div class="btns" id="rutaBtns">
@@ -109,9 +121,14 @@
     <button data-view="aerea">Vista aérea</button>
     <button id="pip" class="on">Ventanas</button>
     <button id="ai">Vista previa IA</button>
+    <button id="xray">Rayos X</button>
     <button id="pause">Pausa</button>
     <button id="speed">1x</button>
     <button id="csv">Datos (CSV)</button>
+  </div>
+  <div class="btns" id="cargaBtns" style="display:none">
+    <button id="xray2">Rayos X</button>
+    <button id="mos" class="on">Ventanas (6)</button>
   </div>
   <div class="btns" id="kitBtns" style="display:none">
     <button id="explode">Armar</button>
@@ -138,10 +155,28 @@
 </aside>
 
 <div id="miniwrap"><h2>Mapa del recorrido</h2><canvas id="mini"></canvas></div>
+<div id="mosaic"></div>
+<aside id="cargoPanel">
+  <h2>Acelerómetros: cabina y cola</h2>
+  <canvas id="cargoChart"></canvas>
+  <div class="legend"><span><i style="background:#1f6feb"></i>Celulares de adelante (eje delantero)</span><span><i style="background:#8e44ad"></i>Celulares de atrás (ejes traseros)</span></div>
+  <p>El mismo bache golpea primero el eje de adelante y después los de atrás. Si la demora coincide con distancia entre ejes ÷ velocidad del GPS, es un bache confirmado y no un ruido de la cabina.</p>
+  <h2>Qué mide cada celular</h2>
+  <table>
+    <tr><td>Adelante centro</td><td>Baches en el carril, de 4 a 9 m</td></tr>
+    <tr><td>Adelante der. e izq.</td><td>Las dos veredas, mirando hacia adelante</td></tr>
+    <tr><td>Atrás centro</td><td>El mismo carril desde atrás: segunda foto de cada bache, con otra luz</td></tr>
+    <tr><td>Atrás der. e izq.</td><td>Las veredas desde el otro ángulo: lo que un auto tapa de frente, se ve de atrás</td></tr>
+    <tr><td>Los 6</td><td>GPS y acelerómetro: el golpe en la cabina y en la caja, con la carga real</td></tr>
+  </table>
+  <p>Con 6 celulares son ~22 GB por turno de ~40 km: por Wi-Fi tarda ~75 min, al límite del temporizador. Conviene Wi-Fi de 5 GHz en la base.</p>
+  <h2>Registro</h2>
+  <ul id="cargoLog" class="log"></ul>
+</aside>
 <div id="server"></div>
 <div id="info"></div>
 <div id="toast"></div>
-<div id="help">Arrastrar: girar · Rueda: zoom · Clic derecho: mover · H: ocultar paneles · P: ventanas · I: vista previa IA · Espacio: pausa</div>
+<div id="help">Arrastrar: girar · Rueda: zoom · Clic derecho: mover · H: ocultar paneles · P: ventanas · I: vista previa IA · X: rayos X · Espacio: pausa</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -219,6 +254,52 @@ function textTex(w, h, draw) {
 const smooth = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const coma = n => String(n).replace(".", ",");
+
+// rayos X: la carrocería se vuelve casi transparente y aparece el cableado
+const isDesc = (o, a) => { while (o) { if (o === a) return true; o = o.parent; } return false; };
+function prepXray(root, skip) {
+  const list = [];
+  root.traverse(o => {
+    if (!o.isMesh || skip.some(k => isDesc(o, k))) return;
+    o.material = o.material.clone();
+    list.push({m: o.material, t: o.material.transparent, op: o.material.opacity, dw: o.material.depthWrite});
+  });
+  return list;
+}
+function applyXray(list, on) {
+  for (const e of list) { e.m.transparent = on || e.t; e.m.opacity = on ? Math.min(e.op, .12) : e.op; e.m.depthWrite = on ? false : e.dw; e.m.needsUpdate = true; }
+}
+const WIRE = {batt: 0xff3b30, acc: 0x2ecc71, gnd: 0x222222, timed: 0xff9f0a, usb: 0xffd60a};
+function buildWiring(parent, comps, runs) {
+  const g = new THREE.Group(); parent.add(g);
+  const lbls = [], pulses = [];
+  for (const c of comps) {
+    c.mesh.position.copy(c.pos); g.add(c.mesh);
+    if (c.html) { const l = makeLabel(c.html, "big xr"); l.obj = c.mesh; l.offset.copy(c.off || V3(0, .6, 0)); l.visible = false; lbls.push(l); }
+  }
+  for (const r of runs) {
+    const curve = new THREE.CatmullRomCurve3(r.pts), rad = r.rad || .03, n = r.n || 3;
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 64, rad, 6), new THREE.MeshBasicMaterial({color: r.col})));
+    for (let i = 0; i < n; i++) {
+      const q = new THREE.Mesh(new THREE.SphereGeometry(rad * 2.2, 8, 6), new THREE.MeshBasicMaterial({color: 0xffffff}));
+      g.add(q); pulses.push({q, curve, t: i / n, sp: r.sp || .5});
+    }
+  }
+  g.visible = false;
+  return {g, lbls, on: false,
+    // las etiquetas solo de cerca, para que no se amontonen
+    set(on, near = true) { this.on = on; g.visible = on; for (const l of lbls) l.visible = on && near; },
+    tick(dt) { if (!this.on) return; for (const p of pulses) { p.t = (p.t + dt * p.sp) % 1; p.q.position.copy(p.curve.getPointAt(p.t)); } }};
+}
+// piezas del cableado
+function wBattery(volt) {
+  const g = new THREE.Group();
+  g.add(box(.7, .45, .42, new THREE.MeshBasicMaterial({color: 0x30343a})));
+  g.add(box(.72, .06, .44, new THREE.MeshBasicMaterial({color: 0x4b5058}), 0, .2, 0));
+  for (const [x, c] of [[-.22, 0xff3b30], [.22, 0x222222]]) { const t = cyl(.05, .05, .1, new THREE.MeshBasicMaterial({color: c}), 10); t.position.set(x, .28, 0); g.add(t); }
+  g.userData.volt = volt; return g;
+}
+const wBox = (w, h, d, col, scr) => { const g = new THREE.Group(); g.add(box(w, h, d, new THREE.MeshBasicMaterial({color: col}))); if (scr) g.add(box(w * .45, h * .4, .01, new THREE.MeshBasicMaterial({color: scr}), 0, 0, d / 2 + .006)); return g; };
 
 // =====================================================================
 // Etiquetas HTML que siguen objetos 3D
@@ -601,6 +682,24 @@ function updatePhoneCams(fullAspect) {
   }
 }
 
+// cableado del camión de basura (se ve con rayos X)
+const garbageWiring = buildWiring(truck, [
+  {mesh: wBattery("12/24"), pos: V3(1.6, .72, -1.35), html: "<b>Batería del camión</b><small>12 o 24 V. El kit toma la batería permanente con un fusible</small>", off: V3(0, .3, -.9)},
+  {mesh: wBox(.22, .16, .3, 0x8a9199), pos: V3(2.45, 1.9, -1.0), html: "<b>Fusiblera · contacto (ACC)</b><small>Avisa cuándo se da arranque: los celulares se prenden solos</small>", off: V3(-.3, .8, -1.4)},
+  {mesh: wBox(.32, .16, .26, 0x16181b, 0x2ecc71), pos: V3(2.75, 2.05, -.62), html: "<b>Kit de dashcam con temporizador</b><small>Sigue 60–90 min después de apagar el motor y corta si la batería baja</small>", off: V3(.4, 1.5, -1.0)},
+  {mesh: wBox(.36, .14, .3, 0x1f4f8b), pos: V3(2.75, 2.05, .25), html: "<b>Regulador → 4 V, 3 salidas</b><small>Reemplaza las baterías de los 3 celulares</small>", off: V3(.4, 1.5, 1.0)}
+], [
+  {col: WIRE.batt, rad: .04, pts: [V3(1.38, 1.0, -1.35), V3(1.9, 1.05, -1.25), V3(2.6, 1.3, -1.1), V3(2.75, 1.8, -.9), V3(2.75, 2.05, -.62)]},
+  {col: WIRE.acc, pts: [V3(2.45, 1.9, -1.0), V3(2.6, 1.95, -.85), V3(2.75, 2.05, -.62)], n: 2},
+  {col: WIRE.gnd, pts: [V3(2.75, 2.0, -.62), V3(2.6, 1.5, -.55), V3(2.2, .98, -.5)], n: 2},
+  {col: WIRE.timed, pts: [V3(2.75, 2.05, -.62), V3(2.8, 2.1, -.2), V3(2.75, 2.05, .25)], n: 2},
+  {col: WIRE.usb, rad: .022, pts: [V3(2.75, 2.1, .25), V3(2.95, 2.4, .12), V3(2.98, 3.3, .05), V3(3.0, 3.36, 0), V3(3.0, 3.2, 0)]},
+  {col: WIRE.usb, rad: .022, pts: [V3(2.75, 2.1, .25), V3(2.95, 2.4, .9), V3(2.95, 3.35, 1.15), V3(2.4, 3.38, 1.12), V3(2.3, 3.15, 1.12)]},
+  {col: WIRE.usb, rad: .022, pts: [V3(2.75, 2.1, .25), V3(2.95, 2.4, -.9), V3(2.95, 3.35, -1.15), V3(2.4, 3.38, -1.12), V3(2.3, 3.15, -1.12)]}
+]);
+const garbageX = prepXray(truck, [garbageWiring.g, ...Object.values(CAMS).map(C => C.phone), ...helpers]);
+let xrayRuta = false;
+
 // =====================================================================
 // Recolectores
 // =====================================================================
@@ -877,6 +976,152 @@ for (const [html, obj, off] of [
   const l = makeLabel(html, "big"); l.obj = obj; l.offset.copy(off); SENS_LBL.push(l);
 }
 
+// =====================================================================
+// Camión de carga con 6 celulares
+// =====================================================================
+const cargo = new THREE.Group(); cargo.visible = false; scene.add(cargo);
+{
+  const cabCol = M(0x1f5fa8, {roughness: .45, metalness: .2}), boxCol = M(0xeef0f2, {roughness: .7});
+  for (const z of [-.5, .5]) cargo.add(box(10.6, .26, .16, dark, -.6, .85, z));         // largueros del chasis
+  cargo.add(box(2.4, 1.6, 2.5, cabCol, 3.5, 1.75, 0));                                   // cabina baja
+  cargo.add(box(2.2, 1.25, 2.5, cabCol, 3.4, 3.15, 0));                                  // cabina alta
+  cargo.add(box(.06, 1.05, 2.3, glass, 4.52, 3.15, 0));                                  // parabrisas
+  for (const z of [-1.26, 1.26]) cargo.add(box(1.2, .9, .04, glass, 3.6, 3.2, z));
+  cargo.add(box(.12, .5, 2.6, M(0x2b2e33), 4.66, .9, 0));                                 // paragolpes
+  for (let i = 0; i < 4; i++) cargo.add(box(.06, .07, 1.8, M(0x7c8590, {metalness: .6}), 4.71, 1.35 + i * .18, 0));
+  for (const z of [-1.0, 1.0]) cargo.add(box(.05, .2, .38, M(0xfff6d8, {emissive: 0xfff2c0, emissiveIntensity: .6}), 4.72, 1.3, z));
+  for (const s of [1, -1]) for (const m of [box(.06, .06, .5, dark, 4.3, 3.4, s * 1.5), box(.08, .5, .22, dark, 4.3, 3.2, s * 1.78)]) { m.layers.set(1); cargo.add(m); }
+  cargo.add(box(7.6, 2.7, 2.55, boxCol, -1.85, 2.65, 0));                                // caja
+  for (let x = -5.4; x < 1.8; x += 1.2) for (const z of [-1.29, 1.29]) cargo.add(box(.06, 2.6, .03, M(0xd0d4d8), x, 2.65, z));
+  cargo.add(box(.04, 2.6, 2.5, M(0xd9dde1), -5.66, 2.65, 0));                            // puertas traseras
+  cargo.add(box(.05, 2.6, .05, M(0x8a9199), -5.69, 2.65, 0));
+  for (const z of [-.6, .6]) for (const y of [1.9, 3.3]) cargo.add(box(.06, .08, .3, M(0x7c8590, {metalness: .6}), -5.7, y, z));
+  for (const z of [-1.1, 1.1]) cargo.add(box(.05, .18, .3, M(0xd64545, {emissive: 0x6a1010}), -5.7, 1.2, z));
+  const cTex = textTex(1024, 200, (g, w, h) => {
+    g.fillStyle = "#1f5fa8"; g.fillRect(0, 140, w, 60);
+    g.fillStyle = "#1d2329"; g.font = "700 62px system-ui"; g.fillText("TRANSPORTE DE CARGA", 40, 90);
+    g.fillStyle = "#fff"; g.font = "600 36px system-ui"; g.fillText("Piloto · 6 celulares en desuso a bordo", 40, 183);
+  });
+  for (const s of [1, -1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.35), new THREE.MeshBasicMaterial({map: cTex, transparent: true})); pl.position.set(-1.85, 2.7, s * 1.285); if (s < 0) pl.rotation.y = Math.PI; cargo.add(pl); }
+}
+const cargoWheels = [];
+const CARGO_AXLES = [3.4, -3.4, -4.6];
+for (const x of CARGO_AXLES) for (const z of [-1.1, 1.1]) {
+  const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(x, .55, z); cargo.add(w); cargoWheels.push(w);
+  const h = new THREE.Mesh(hubG, grey); h.position.set(x, .55, z); cargo.add(h); cargoWheels.push(h);
+}
+// los 6 celulares: 3 en el parabrisas y 3 en la cola, dentro de carcasas estancas
+const CC = [
+  {key: "fc", name: "Adelante centro · baches", pos: V3(4.42, 3.45, 0), dir: V3(1, -.42, 0)},
+  {key: "fl", name: "Adelante izquierda · vereda de enfrente", pos: V3(4.4, 3.45, -1.0), dir: V3(.55, -.3, -1)},
+  {key: "fr", name: "Adelante derecha · vereda", pos: V3(4.4, 3.45, 1.0), dir: V3(.55, -.5, 1)},
+  {key: "rc", name: "Atrás centro · baches, 2.ª foto", pos: V3(-5.82, 3.75, 0), dir: V3(-1, -.5, 0), rear: true},
+  {key: "rl", name: "Atrás izquierda · vereda de enfrente", pos: V3(-5.82, 3.75, -1.0), dir: V3(-.55, -.3, -1), rear: true},
+  {key: "rr", name: "Atrás derecha · vereda", pos: V3(-5.82, 3.75, 1.0), dir: V3(-.55, -.5, 1), rear: true}
+];
+const cargoHelpers = [], cargoPhones = [];
+const frusMat = new THREE.LineBasicMaterial({color: 0xd4a514, transparent: true, opacity: .75});
+const frusFill = new THREE.MeshBasicMaterial({color: 0xf2c230, transparent: true, opacity: .14, side: THREE.DoubleSide, depthWrite: false});
+const tmpCam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
+for (const c of CC) {
+  c.dir.normalize();
+  const ph = makePhone(.42, .86, .05, true);
+  ph.quaternion.setFromUnitVectors(V3(0, 0, -1), V3(c.dir.x, 0, c.dir.z).normalize());
+  ph.rotateX(-Math.asin(-c.dir.y)); ph.rotateZ(Math.PI / 2);
+  ph.position.copy(c.pos); cargo.add(ph); cargoPhones.push(ph);
+  if (c.rear) { // carcasa estanca naranja con visera
+    const h = new THREE.Group();
+    h.add(box(.06, .56, .98, M(0xe0672b, {roughness: .6}), .12, 0, 0));
+    h.add(box(.32, .05, 1.0, M(0xe0672b, {roughness: .6}), -.04, .3, 0));
+    h.position.copy(c.pos); cargo.add(h);
+  } else cargo.add(box(.08, .2, .08, dark, c.pos.x, 3.7, c.pos.z));
+  c.cam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
+  c.world = new THREE.Vector3();
+  // rayos del borde de la imagen hasta el piso (o 13 m si miran al horizonte)
+  tmpCam.position.copy(c.pos); tmpCam.lookAt(c.pos.clone().add(c.dir)); tmpCam.updateMatrixWorld();
+  const th = Math.tan(43 / 2 * Math.PI / 180), pts = [];
+  for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const d = V3(u * th * 16 / 9, v * th, -1).applyQuaternion(tmpCam.quaternion).normalize();
+    const k = d.y < -.02 ? Math.min((c.pos.y - .05) / -d.y, 13) : 13;
+    pts.push(c.pos.clone().addScaledVector(d, k));
+  }
+  const lines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([...pts.flatMap(q => [c.pos, q]), pts[0], pts[1], pts[1], pts[2], pts[2], pts[3], pts[3], pts[0]]), frusMat);
+  const fill = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]), frusFill);
+  cargo.add(lines, fill); cargoHelpers.push(lines, fill);
+  c.label = makeLabel(`<b>${c.name.split(" · ")[0]}</b>`, ""); c.label.obj = ph;
+  c.label.offset.set(c.rear ? -.3 : .3, .55, c.pos.z * .5);
+}
+const cargoMarkers = {chassis: new THREE.Object3D(), rearBox: null};
+const cargoWiring = buildWiring(cargo, [
+  {mesh: wBattery("24"), pos: V3(.9, .62, -1.2), html: "<b>Baterías del camión · 24 V</b><small>Un fusible a la salida protege todo el kit</small>", off: V3(.4, .3, -1.0)},
+  {mesh: wBox(.22, .16, .3, 0x8a9199), pos: V3(3.25, 2.25, -.95), html: "<b>Contacto (ACC)</b><small>Prende los 6 celulares al dar arranque</small>", off: V3(-.3, .9, -1.4)},
+  {mesh: wBox(.32, .16, .26, 0x16181b, 0x2ecc71), pos: V3(3.7, 2.45, -.55), html: "<b>Kit de dashcam con temporizador</b><small>60–90 min más en la base para subir las fotos; corta si la batería baja</small>", off: V3(.6, 1.5, -1.1)},
+  {mesh: wBox(.36, .14, .3, 0x1f4f8b), pos: V3(3.7, 2.45, .35), html: "<b>Regulador de la cabina</b><small>24 V → 4 V, 3 salidas para los celulares de adelante</small>", off: V3(.6, 1.5, 1.1)},
+  {mesh: wBox(.5, .4, .6, 0xe0672b), pos: V3(-5.35, 1.05, 0), html: "<b>Caja estanca en la cola</b><small>Regulador 24 V → 4 V, 3 salidas para los celulares de atrás</small>", off: V3(-.2, .5, 0)},
+  {mesh: cargoMarkers.chassis, pos: V3(-1.2, .95, -.55), html: "<b>Cable por el chasis · ~9 m</b><small>Sujeto al larguero con precintos y en caño corrugado, lejos del escape</small>", off: V3(0, .3, -.6)}
+], [
+  {col: WIRE.batt, rad: .04, pts: [V3(.9, .9, -1.2), V3(1.6, 1.0, -1.1), V3(2.8, 1.3, -.95), V3(3.5, 2.1, -.7), V3(3.7, 2.45, -.55)]},
+  {col: WIRE.acc, pts: [V3(3.25, 2.25, -.95), V3(3.5, 2.35, -.8), V3(3.7, 2.45, -.55)], n: 2},
+  {col: WIRE.gnd, pts: [V3(3.7, 2.4, -.55), V3(3.4, 1.6, -.5), V3(3.0, .98, -.5)], n: 2},
+  {col: WIRE.timed, pts: [V3(3.7, 2.45, -.55), V3(3.75, 2.5, -.1), V3(3.7, 2.45, .35)], n: 2},
+  {col: WIRE.timed, rad: .035, n: 6, sp: .25, pts: [V3(3.7, 2.4, -.55), V3(3.2, 1.6, -.6), V3(2.4, 1.0, -.55), V3(0, .98, -.55), V3(-3, .98, -.55), V3(-4.9, .98, -.55), V3(-5.35, 1.05, -.2)]},
+  ...[0, -1.0, 1.0].map(z => ({col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.3, 2.6, z * .8), V3(4.42, 3.6, z), V3(4.42, 3.7, z), V3(4.42, 3.55, z)]})),
+  ...[0, -1.0, 1.0].map(z => ({col: WIRE.usb, rad: .022, pts: [V3(-5.35, 1.25, 0), V3(-5.72, 1.5, z * .9), V3(-5.74, 3.2, z), V3(-5.8, 3.6, z)]}))
+]);
+const cargoX = prepXray(cargo, [cargoWiring.g, ...cargoPhones, ...cargoHelpers]);
+let xrayCarga = false;
+// recorrido del camión de carga y sus dos acelerómetros
+const CG = {x: -70, v: 7, simT: 0, bumpF: 0, bumpR: 0, hits: new Map()};
+const CBUF = 300, accCF = new Float32Array(CBUF), accCR = new Float32Array(CBUF);
+let cI = 0, cAcc = 0;
+const cargoLogEl = document.getElementById("cargoLog");
+const cclock = () => { const m = 9 * 60 + Math.floor(CG.simT); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+function cargoLog(html) {
+  const li = document.createElement("li"); li.innerHTML = html; cargoLogEl.prepend(li);
+  while (cargoLogEl.children.length > 30) cargoLogEl.lastChild.remove();
+}
+function stepCargo(dt) {
+  const prevX = CG.x;
+  CG.simT += dt; CG.x += CG.v * dt;
+  if (CG.x > 88) { CG.x = -88; CG.hits.clear(); }
+  cargo.position.set(CG.x, 0, ROAD_Z);
+  for (const w of cargoWheels) w.rotation.z -= CG.v * dt / .55;
+  if (CG.x > prevX) for (const o of OBJS) {
+    if (o.kind !== "hole" || !present(o)) continue;
+    if (!(Math.abs(ROAD_Z + 1.1 - o.z) < o.r * 1.1 || Math.abs(ROAD_Z - 1.1 - o.z) < o.r * 1.1)) continue;
+    CARGO_AXLES.forEach((ax, i) => {
+      if (!(prevX + ax < o.x && CG.x + ax >= o.x)) return;
+      if (i === 0) {
+        CG.bumpF = .5; CG.hits.set(o, CG.simT);
+        cargoLog(`<em>${cclock()} ·</em> Celulares de adelante: <b>golpe</b> en el carril · GPS ${LAT}, ${lonOf(o.x)}`);
+      } else {
+        CG.bumpR = .45;
+        if (i === 1 && CG.hits.has(o)) {
+          const dtv = CG.simT - CG.hits.get(o), base = CARGO_AXLES[0] - CARGO_AXLES[1];
+          cargoLog(`<em>${cclock()} ·</em> Celulares de atrás: el golpe llega <b>${coma(dtv.toFixed(2))} s</b> después. ${coma(base.toFixed(1))} m ÷ ${coma(dtv.toFixed(2))} s = <b>${Math.round(base / dtv * 3.6)} km/h</b>; el GPS marca ${Math.round(CG.v * 3.6)} km/h. Coinciden: <b>bache confirmado</b>`);
+        }
+      }
+    });
+  }
+  cAcc += dt;
+  while (cAcc > 1 / 30) {
+    cAcc -= 1 / 30;
+    const n = () => gauss() * .035;
+    accCF[cI] = n() + (CG.bumpF > .02 ? CG.bumpF * (cI % 2 ? 1 : -.8) : 0);
+    accCR[cI] = n() * 1.4 + (CG.bumpR > .02 ? CG.bumpR * (cI % 2 ? -1 : .8) : 0);
+    CG.bumpF *= .55; CG.bumpR *= .55; cI = (cI + 1) % CBUF;
+  }
+  cargo.updateMatrixWorld();
+  for (const c of CC) {
+    c.world.copy(c.pos); cargo.localToWorld(c.world);
+    c.cam.position.copy(c.world); c.cam.lookAt(c.world.clone().add(c.dir)); c.cam.updateMatrixWorld();
+  }
+}
+// ventanas de los 6 celulares
+const mosaic = document.getElementById("mosaic");
+mosaic.innerHTML = CC.map(c => `<div class="cell"><div>${c.name}</div><div class="mimg" data-k="${c.key}"></div></div>`).join("");
+let mosOn = true;
+
 // sombras: todo proyecta y recibe, salvo lo transparente, lo plano y el horizonte
 scene.traverse(o => {
   if (!o.isMesh || o.userData.noShadow) return;
@@ -946,7 +1191,7 @@ function projectBox(o, cam) {
 // foto de evidencia: se renderiza la vista del celular en una textura aparte y se copia a un canvas
 const SNAP_W = 384, SNAP_H = 216;
 const snapRT = new THREE.WebGLRenderTarget(SNAP_W, SNAP_H), snapBuf = new Uint8Array(SNAP_W * SNAP_H * 4);
-function setHelpers(on) { for (const h of helpers) h.visible = on; }
+function setHelpers(on) { for (const h of helpers) h.visible = on; garbageWiring.g.visible = on && garbageWiring.on; }
 function snap(cam) {
   const heat = heatGroup.visible;
   setHelpers(false); heatGroup.visible = false;
@@ -1325,14 +1570,17 @@ function setView(v) {
 function setMode(m) {
   mode = m;
   document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
-  const ruta = m === "ruta";
-  city.visible = truck.visible = objGroup.visible = ruta;
+  const ruta = m === "ruta", carga = m === "carga";
+  city.visible = objGroup.visible = ruta || carga;
+  truck.visible = ruta; cargo.visible = carga;
   workers.forEach(w => w.g.visible = ruta);
   kit.visible = m === "kit"; sens.visible = m === "sensores";
   for (const id of ["panel", "miniwrap", "rutaBtns", "day"]) document.getElementById(id).style.display = ruta ? "" : "none";
   document.getElementById("kitBtns").style.display = m === "kit" ? "" : "none";
-  info.style.display = ruta ? "none" : "block"; info.innerHTML = INFO[m] || "";
-  scene.background = ruta ? SKY : STUDIO; scene.fog = ruta ? FOG : null;
+  document.getElementById("cargaBtns").style.display = carga ? "" : "none";
+  document.getElementById("cargoPanel").style.display = carga ? "block" : "none";
+  info.style.display = ruta || carga ? "none" : "block"; info.innerHTML = INFO[m] || "";
+  scene.background = ruta || carga ? SKY : STUDIO; scene.fog = ruta || carga ? FOG : null;
   for (const C of Object.values(CAMS)) C.label.visible = ruta;
   zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = serverLabel.visible = ruta;
   for (const o of OBJS) o.label.visible = false;
@@ -1340,7 +1588,8 @@ function setMode(m) {
   for (const l of SENS_LBL) l.visible = m === "sensores";
   if (ruta) setView(view);
   else heatGroup.visible = false;
-  if (!ruta) { sun.position.set(8, 14, 10); sun.target.position.set(0, 0, 0); }
+  if (!ruta && !carga) { sun.position.set(8, 14, 10); sun.target.position.set(0, 0, 0); }
+  if (carga) { stepCargo(0); camera.position.set(CG.x - 13, 13, 17); controls.target.set(CG.x - .5, 1.5, 1.8); }
   if (m === "kit") { camera.position.set(-2.6, 5.4, 13.5); controls.target.set(-2.6, 2.1, .6); }
   if (m === "sensores") { camera.position.set(7.5, 6.5, 12); controls.target.set(0, 3.2, 0); }
 }
@@ -1348,6 +1597,9 @@ document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(
 document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
 document.getElementById("pip").onclick = e => { pipOn = !pipOn; e.target.classList.toggle("on", pipOn); };
 document.getElementById("ai").onclick = e => { aiPreview = !aiPreview; e.target.classList.toggle("on", aiPreview); };
+document.getElementById("xray").onclick = e => { xrayRuta = !xrayRuta; e.target.classList.toggle("on", xrayRuta); applyXray(garbageX, xrayRuta); };
+document.getElementById("xray2").onclick = e => { xrayCarga = !xrayCarga; e.target.classList.toggle("on", xrayCarga); applyXray(cargoX, xrayCarga); };
+document.getElementById("mos").onclick = e => { mosOn = !mosOn; e.target.classList.toggle("on", mosOn); };
 document.getElementById("pause").onclick = e => { S.paused = !S.paused; e.target.textContent = S.paused ? "Seguir" : "Pausa"; e.target.classList.toggle("on", S.paused); };
 document.getElementById("speed").onclick = e => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? .5 : 1; e.target.textContent = `${coma(S.speed)}x`; };
 document.getElementById("csv").onclick = () => {
@@ -1378,6 +1630,7 @@ addEventListener("keydown", e => {
   if (e.key === "h" || e.key === "H") document.body.classList.toggle("clean");
   if (e.key === "p" || e.key === "P") document.getElementById("pip").click();
   if (e.key === "i" || e.key === "I") document.getElementById("ai").click();
+  if (e.key === "x" || e.key === "X") document.getElementById(mode === "carga" ? "xray2" : "xray").click();
   if (e.code === "Space") { e.preventDefault(); document.getElementById("pause").click(); }
 });
 addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
@@ -1418,8 +1671,8 @@ function loop() {
     });
     srvLed.material.emissive.setHex(up && Math.floor(et * 6) % 2 ? 0x2e9e5b : 0x000000);
     serverLabel.visible = up && document.body.classList.contains("clean");
-    zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = view !== "aerea" && !up;
-    for (const C of Object.values(CAMS)) C.label.visible = view !== "aerea";
+    zoneLblF.visible = zoneLblS.visible = zoneLblL.visible = view !== "aerea" && !up && !xrayRuta;
+    for (const C of Object.values(CAMS)) C.label.visible = view !== "aerea" && !xrayRuta;
     for (const C of Object.values(CAMS)) C.flash = Math.max(0, C.flash - dt * 7);
     screenT += dt;
     if (screenT > .25) { screenT = 0; drawScreen(et, totalFotos(), LAT, lonOf(S.x)); }
@@ -1462,6 +1715,20 @@ function loop() {
     kit.rotation.y = Math.sin(et * .25) * .45;
     screenT += dt; if (screenT > .5) { screenT = 0; drawScreen(et, 128, LAT, "-65.31000"); }
   }
+  garbageWiring.set(xrayRuta && mode === "ruta" && view !== "aerea", camera.position.distanceTo(truck.position) < 16); garbageWiring.tick(dt);
+  cargoWiring.set(xrayCarga && mode === "carga", camera.position.distanceTo(cargo.position) < 19); cargoWiring.tick(dt);
+  for (const c of CC) c.label.visible = mode === "carga" && !xrayCarga;
+  if (mode === "carga") {
+    const px = CG.x;
+    stepCargo(dt);
+    if (Math.abs(CG.x - px) > 30) { camera.position.set(CG.x - 13, 13, 17); controls.target.set(CG.x - .5, 1.5, 1.8); }
+    else { camera.position.x += CG.x - px; controls.target.x += CG.x - px; }
+    sun.position.set(CG.x + 30, 55, 30); sun.target.position.set(CG.x, 0, 0);
+    screenT += dt; if (screenT > .25) { screenT = 0; drawScreen(et, Math.floor(CG.simT * 2.8) * 6, LAT, lonOf(CG.x)); }
+    const [gc, wc, hc] = fitCanvas(document.getElementById("cargoChart"));
+    drawLines(gc, wc, hc, [[accCR, "#8e44ad", cI], [accCF, "#1f6feb", cI]], .6);
+    gc.fillStyle = "#8a959e"; gc.font = "10px system-ui"; gc.fillText("+0,6 g", 3, 11); gc.fillText("−0,6 g", 3, hc - 3);
+  }
   if (mode === "sensores") {
     bigPhone.rotation.set(Math.sin(et * .8) * .25, Math.sin(et * .5) * .45, Math.sin(et * 1.1) * .15);
     invQ.copy(bigPhone.quaternion).invert();
@@ -1479,6 +1746,23 @@ function loop() {
   if (camView) setHelpers(false);
   renderer.render(scene, camView ? CAMS[view].cam : camera);
   setHelpers(true);
+  // ventanas de los 6 celulares del camión de carga
+  const showMos = mode === "carga" && mosOn;
+  mosaic.style.display = showMos ? "grid" : "none";
+  if (showMos) {
+    const hide = [...cargoHelpers, ...cargoPhones, cargoWiring.g], was = hide.map(o => o.visible);
+    hide.forEach(o => o.visible = false);
+    for (const el of mosaic.querySelectorAll(".mimg")) {
+      const r = el.getBoundingClientRect(), c = CC.find(q => q.key === el.dataset.k);
+      c.cam.aspect = r.width / r.height; c.cam.updateProjectionMatrix();
+      renderer.setScissorTest(true);
+      renderer.setScissor(r.left, H - r.bottom, r.width, r.height);
+      renderer.setViewport(r.left, H - r.bottom, r.width, r.height);
+      renderer.render(scene, c.cam);
+    }
+    renderer.setScissorTest(false);
+    hide.forEach((o, i) => o.visible = was[i]);
+  }
   // ventanas con lo que ve cada celular
   const [g] = fitCanvas(ov);
   g.clearRect(0, 0, W, H);

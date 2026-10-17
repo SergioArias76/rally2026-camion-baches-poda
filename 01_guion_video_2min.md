@@ -62,6 +62,8 @@ Son unas 180 palabras, que leídas tranquilas dan 1:35. El resto es aire para la
    - **Vista aérea (para "Quién lo usa"):** mejor desde el día 3, cuando ya hay baches y montones en rojo y otros resueltos en verde.
    - **Kit:** grabá el paso de "Armar" a "Despiezar". Los tres celulares quedan en el parabrisas y en los dos vidrios laterales.
    - **Sensores:** 10 segundos del celular girando, mientras el gráfico muestra cómo cambia la gravedad en cada eje.
+   - **Rayos X (tecla X):** acerquen la cámara a la cabina con la rueda del mouse. Se ve el cableado: batería → fusible y contacto → kit de dashcam con temporizador → regulador → cada celular, con pulsos que muestran la corriente. Sirve para la escena "La idea" o para responder "¿cómo se alimentan?".
+   - **4 · Camión de carga (opcional, para mostrar que escala):** 6 celulares, 3 adelante y 3 en la cola. Graben las 6 ventanas y el registro donde el golpe del bache llega primero a la cabina y ~1 s después a la cola: la demora coincide con la velocidad del GPS y confirma el bache. Con rayos X se ve el cable por el chasis hasta la caja estanca de atrás.
 6. **Ventanas** (tecla **P**) prende o apaga las tres ventanas de las cámaras. **Espacio** pausa.
 7. El botón **Datos (CSV)** baja los eventos simulados: golpes, paradas, detecciones del servidor y demoras. Sirven para mostrar una planilla "de ejemplo", siempre aclarando que es una simulación.
 
