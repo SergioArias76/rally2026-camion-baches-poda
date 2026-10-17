@@ -2,8 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Camión: baches y poda 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Camión que ve baches y poda · Trelew</title>
+<meta name="description" content="Simulación 3D interactiva: celulares en desuso en el camión de la basura detectan baches y poda en Trelew. Rally Latinoamericano de Innovación 2026.">
+<meta property="og:title" content="Camión que ve baches y poda · Trelew">
+<meta property="og:description" content="Recorré en 3D cómo celulares viejos en el camión de la basura arman el mapa de baches y poda de la ciudad.">
+<meta name="theme-color" content="#1d2329">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='18' width='36' height='26' rx='3' fill='%232f8f5b'/%3E%3Crect x='40' y='26' width='18' height='18' rx='3' fill='%231f6feb'/%3E%3Ccircle cx='16' cy='48' r='6' fill='%231d2329'/%3E%3Ccircle cx='48' cy='48' r='6' fill='%231d2329'/%3E%3C/svg%3E">
 <style>
   :root{
     --ink:#1d2329; --muted:#5b6670; --card:rgba(255,255,255,.93); --line:#d5dde3;
@@ -33,7 +38,7 @@
   button{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;cursor:pointer;color:var(--ink)}
   button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   #day{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
-  aside{position:fixed;top:118px;right:12px;width:320px;background:var(--card);border:1px solid var(--line);
+  aside{position:fixed;top:var(--top,118px);right:12px;width:320px;background:var(--card);border:1px solid var(--line);
     border-radius:10px;padding:10px 12px;max-height:calc(100% - 130px);overflow:auto}
   aside h2{font-size:12px;margin:10px 0 4px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
   aside h2:first-child{margin-top:0}
@@ -50,12 +55,12 @@
   #miniwrap{position:fixed;left:12px;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
   #miniwrap h2{font-size:12px;margin:0 0 4px;color:var(--muted);font-weight:600}
   #mini{display:block;width:340px;height:116px}
-  #pips{position:fixed;left:12px;top:118px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  #pips{position:fixed;left:12px;top:var(--top,118px);display:flex;flex-direction:column;gap:8px;pointer-events:none}
   .pip{width:300px;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.15)}
   .pip .ph{height:28px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);background:var(--card);display:flex;justify-content:space-between;gap:8px}
   .pip .ph b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-  .pip .pimg{margin:0 6px 6px;height:162px}
-  #server{position:fixed;left:12px;top:118px;width:440px;max-height:calc(100% - 300px);overflow:auto;background:var(--card);
+  .pip .pimg{margin:0 6px 6px;aspect-ratio:16/9}
+  #server{position:fixed;left:12px;top:var(--top,118px);width:440px;max-height:calc(100% - 300px);overflow:auto;background:var(--card);
     border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
   #server h2{font-size:15px;margin:0 0 8px}
   #server .row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
@@ -67,7 +72,7 @@
   #thumbs canvas{width:100%;aspect-ratio:16/9;display:block;border-radius:4px;background:#ccd}
   #srvSum{font-size:13px;margin:8px 0 0;font-weight:600}
   .note{font-size:11px;color:var(--muted);margin:6px 0 0}
-  #info{position:fixed;left:12px;top:118px;width:360px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
+  #info{position:fixed;left:12px;top:var(--top,118px);width:360px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:none}
   #info h2{font-size:15px;margin:0 0 6px}
   #info p{margin:0 0 8px;color:var(--muted)}
   #info table{width:100%;border-collapse:collapse;font-size:13px}
@@ -75,14 +80,14 @@
   #info td:last-child{text-align:right;color:var(--muted)}
   #sensChart{width:100%;height:130px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:8px}
   #help{position:fixed;right:12px;bottom:12px;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
-  #toast{position:fixed;left:50%;top:126px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
+  #toast{position:fixed;left:50%;top:calc(var(--top,118px) + 8px);transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
   body.clean header,body.clean aside,body.clean #miniwrap,body.clean #info,body.clean #help{display:none!important}
   body.clean #pips,body.clean #server{top:12px}
-  #mosaic{position:fixed;left:12px;top:118px;display:none;grid-template-columns:400px;gap:6px;pointer-events:none}
+  #mosaic{position:fixed;left:12px;top:var(--top,118px);display:none;grid-template-columns:400px;gap:6px;pointer-events:none}
   #mosaic .cell{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:transparent}
   #mosaic .cell div:first-child{height:22px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--muted);background:var(--card);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #mosaic .mimg{height:225px}
-  @media (max-height:780px){#mosaic .mimg{height:130px}}
+  #mosaic .mimg{aspect-ratio:16/9}
+  @media (max-height:780px){#mosaic{grid-template-columns:280px}}
   #cargoPanel{display:none}
   #cargoChart{width:100%;height:120px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
   #cargoPanel table{width:100%;border-collapse:collapse;font-size:12px}
@@ -92,7 +97,91 @@
   .lbl.xr{border-color:#ff9f0a;background:#fff4e0}
   @media (max-height:860px){#pipL{display:none}}
   @media (max-height:660px){#pipS{display:none}}
-  @media (max-width:900px){aside{display:none}#info{width:auto;right:12px}#mini{width:260px}.pip{width:260px}.pip .pimg{height:139px}#server{width:auto;right:12px}}
+  @media (max-width:1100px){#mini{width:260px}.pip{width:250px}#info{width:320px}}
+  /* --- barra superior --- */
+  header{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:6px;z-index:5;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  header .top{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+  header .brand{display:flex;flex-direction:column;line-height:1.2;margin-right:4px}
+  header .tools{display:flex;gap:6px;align-items:center;min-width:0}
+  header .tools .btns,.tabs{min-width:0;max-width:100%}
+  .pip .ph span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pip .ph b{white-space:nowrap}
+  header .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+  #day{margin-left:0}
+  .tabs{background:#eef1f4;border-radius:9px;padding:3px;gap:3px}
+  .tabs button{border:0;background:transparent;padding:6px 11px;font-weight:500}
+  .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.round{width:32px;padding:5px 0;font-weight:700;border-radius:50%}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (hover:hover){button:not(.on):not(.primary):hover{background:#f1f4f6}}
+  /* --- bienvenida --- */
+  #welcome{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;
+    background:rgba(29,35,41,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  #welcome .card{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:calc(100% - 16px);overflow:auto;padding:22px 22px 18px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+  #welcome .kicker{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+  #welcome h2{font-size:22px;line-height:1.2;margin:4px 0 8px}
+  #welcome p{margin:0 0 10px;color:var(--muted);font-size:15px}
+  #welcome ul{margin:0 0 14px;padding:0;list-style:none;display:grid;gap:8px}
+  #welcome li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+  #welcome li span{flex:0 0 28px;height:28px;border-radius:8px;background:#eef3fb;display:flex;align-items:center;justify-content:center;font-size:15px}
+  #welcome .go{display:flex;gap:8px;flex-wrap:wrap}
+  #welcome .go button{font-size:15px;padding:10px 16px;border-radius:10px;flex:1 1 180px}
+  #welcome .go button:disabled{opacity:.55;cursor:wait}
+  #welcome .foot{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  #loadMsg{font-size:13px;color:var(--muted);margin:0 0 10px}
+  #loadMsg.err{color:var(--bad);font-weight:600}
+  /* --- tour guiado --- */
+  #tour{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));z-index:6;display:none;
+    background:#fff;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.22);padding:14px 16px 12px;border:1px solid var(--line)}
+  #tour .tt{font-size:12px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  #tour h3{margin:2px 0 4px;font-size:17px}
+  #tour p{margin:0 0 10px;color:var(--muted);font-size:14px}
+  #tour .nav{display:flex;gap:8px;align-items:center}
+  #tour .dots{display:flex;gap:4px;margin-right:auto}
+  #tour .dots i{width:7px;height:7px;border-radius:50%;background:#d5dde3}
+  #tour .dots i.on{background:var(--accent)}
+  body.touring #help,body.touring #miniwrap{display:none}
+  #sheetBtn{display:none}
+  /* --- celulares --- */
+  @media (max-width:760px){
+    html,body{font-size:13px}
+    header{top:6px;left:6px;right:6px;padding:6px 8px;border-radius:12px;overflow:hidden;gap:5px}
+    header .top{flex-wrap:wrap;gap:5px 8px}
+    header .brand{flex:1 1 0;min-width:0}
+    header h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #tourBtn{padding:5px 9px}
+    .lbl.zone{display:none!important}
+    .pip .ph{font-size:11px;height:24px;padding:4px 7px}
+    header h1{font-size:14px}
+    header .sim{font-size:11px}
+    .tabs,header .tools .btns{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    .tabs::-webkit-scrollbar,header .tools .btns::-webkit-scrollbar{display:none}
+    .tabs{order:3;width:100%}
+    .tabs button,header .tools button{white-space:nowrap;min-height:32px;font-size:12.5px;padding:5px 9px}
+    header .tools .sep,#csv,#loadGlb,#speed,#day{display:none}
+    #help,#miniwrap,#pipS,#pipL{display:none!important}
+    #pips{left:6px}
+    .pip{width:46vw}
+    #mosaic{left:6px;grid-template-columns:54vw}
+    .lbl{font-size:11px;padding:2px 5px}
+    .lbl.big{font-size:11px;max-width:170px;padding:4px 6px}
+    .lbl.big small{display:none}
+    #server{left:6px;right:6px;width:auto;max-height:46vh}
+    #thumbs{grid-template-columns:repeat(2,1fr)}
+    /* paneles de datos: hoja que sube desde abajo */
+    aside,#info{display:block;top:auto!important;bottom:0;left:0;right:0;width:auto;max-height:52vh;border-radius:16px 16px 0 0;
+      padding-bottom:calc(14px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .25s ease;z-index:7;box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+    body.sheet aside,body.sheet #info{transform:none}
+    #sheetBtn{display:block;position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:8;border-radius:20px;padding:8px 14px;
+      font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+    body.touring #sheetBtn{display:none}
+    #tour{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px 12px 10px}
+    #tour h3{font-size:15px}
+    #tour p{font-size:13px}
+    #welcome h2{font-size:19px}
+    #welcome p{font-size:14px}
+  }
 </style>
 </head>
 <body>
@@ -106,23 +195,32 @@
 <div id="labels"></div>
 
 <header>
-  <h1>Camión que ve baches y poda · Trelew</h1>
-  <div class="btns">
-    <button data-mode="ruta" class="on">1 · Recorrido</button>
-    <button data-mode="kit">2 · Kit</button>
-    <button data-mode="sensores">3 · Sensores</button>
-    <button data-mode="carga">4 · Camión de carga</button>
+  <div class="top">
+    <div class="brand"><h1>Camión que ve baches y poda · Trelew</h1><span class="sim">Simulación ilustrativa · datos no reales</span></div>
+    <div class="btns tabs" role="tablist">
+      <button data-mode="ruta" class="on">1 · Recorrido</button>
+      <button data-mode="kit">2 · Kit</button>
+      <button data-mode="sensores">3 · Sensores</button>
+      <button data-mode="carga">4 · Camión de carga</button>
+    </div>
+    <div class="right">
+      <span id="day">Día 1 de 4</span>
+      <button id="tourBtn" class="primary">▶ Tour guiado</button>
+      <button id="aboutBtn" class="round" aria-label="Acerca del proyecto">?</button>
+    </div>
   </div>
-  <span class="sep"></span>
+  <div class="tools">
   <div class="btns" id="rutaBtns">
     <button data-view="seguir" class="on">Seguir camión</button>
     <button data-view="front">Cámara adelante</button>
     <button data-view="side">Cámara derecha</button>
     <button data-view="left">Cámara izquierda</button>
     <button data-view="aerea">Vista aérea</button>
+    <span class="sep"></span>
     <button id="pip" class="on">Ventanas</button>
     <button id="ai">Vista previa IA</button>
     <button id="xray">Rayos X</button>
+    <span class="sep"></span>
     <button id="pause">Pausa</button>
     <button id="speed">1x</button>
     <button id="csv">Datos (CSV)</button>
@@ -141,9 +239,35 @@
     <button id="loadGlb">Cargar modelo 3D (.glb)</button>
     <input type="file" id="glbFile" accept=".glb,.gltf" hidden>
   </div>
-  <span class="sim">Simulación ilustrativa, datos no reales</span>
-  <span id="day">Día 1 de 4</span>
+  </div>
 </header>
+<div id="welcome">
+  <div class="card">
+    <div class="kicker">Rally Latinoamericano de Innovación 2026 · Desafío 02</div>
+    <h2>El camión que ya pasa por todas las calles, ahora también ve</h2>
+    <p>Celulares en desuso, sin batería, viajan en el camión de la basura de Trelew. Sacan fotos y miden golpes, y al volver a la base arman el mapa de baches y de poda en la vereda.</p>
+    <ul>
+      <li><span>🚛</span><div><b>Recorrido:</b> el camión, lo que ve cada celular y el mapa que se arma día a día.</div></li>
+      <li><span>🔧</span><div><b>Kit:</b> las piezas y cómo se instalan, paso a paso.</div></li>
+      <li><span>📳</span><div><b>Sensores:</b> qué mide cada sensor del celular.</div></li>
+      <li><span>🚚</span><div><b>Camión de carga:</b> una cámara adelante y dos celulares atrás que confirman cada bache.</div></li>
+    </ul>
+    <p id="loadMsg">Cargando el modelo 3D…</p>
+    <div class="go">
+      <button id="startTour" class="primary" disabled>▶ Ver el tour guiado (1 min)</button>
+      <button id="startFree" disabled>Explorar libre</button>
+    </div>
+    <div class="foot">Equipo: Sergio, Yael, Agustín e Ignacio · Sede Trelew, Chubut, Argentina.<br>Es una simulación ilustrativa: los datos que muestra no son reales.<br><span id="touchHint">Arrastrá para girar · rueda para zoom · clic derecho para mover.</span></div>
+  </div>
+</div>
+<div id="tour" role="dialog" aria-live="polite">
+  <div class="tt" id="tourCount"></div>
+  <h3 id="tourTitle"></h3>
+  <p id="tourText"></p>
+  <div class="nav"><div class="dots" id="tourDots"></div>
+    <button id="tourExit">Salir</button><button id="tourPrev">← Atrás</button><button id="tourNext" class="primary">Siguiente →</button></div>
+</div>
+<button id="sheetBtn">Datos ▴</button>
 
 <aside id="panel">
   <h2>Acelerómetro · 100 lecturas/s</h2>
@@ -183,6 +307,14 @@
 <div id="toast"></div>
 <div id="help">Arrastrar: girar · Rueda: zoom · Clic derecho: mover · H: ocultar paneles · P: ventanas · I: vista previa IA · X: rayos X · Espacio: pausa</div>
 
+<script>
+// si falla la librería 3D o WebGL, se avisa en la bienvenida en vez de quedar en blanco
+window.addEventListener("error", e => {
+  if (window.__ready) return;
+  const m = document.getElementById("loadMsg");
+  if (m) { m.textContent = "No se pudo cargar el 3D. Revisá la conexión a internet o probá con otro navegador (Chrome, Safari o Firefox actualizados)."; m.className = "err"; }
+}, true);
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -192,7 +324,8 @@
 // Base: renderer, escena, luces
 // =====================================================================
 const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const MOBILE = matchMedia("(pointer: coarse)").matches || Math.min(innerWidth, innerHeight) < 600;
+renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -221,7 +354,7 @@ controls.maxPolarAngle = Math.PI * 0.49;
 scene.add(new THREE.HemisphereLight(0xeaf4ff, 0x9c8a6a, 0.8));
 const sun = new THREE.DirectionalLight(0xfff3df, 0.85);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, {left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 160});
 sun.shadow.bias = -0.0004;
 scene.add(sun, sun.target);
@@ -255,6 +388,11 @@ function textTex(w, h, draw) {
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   draw(c.getContext("2d"), w, h);
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+// ubica la cámara; en pantallas angostas (celular vertical) se aleja para que entre todo
+function camPlace(pos, tgt) {
+  const asp = innerWidth / innerHeight, k = asp < .8 ? 1.9 : asp < 1.3 ? 1.35 : 1;
+  camera.position.copy(tgt).add(pos.clone().sub(tgt).multiplyScalar(k)); controls.target.copy(tgt);
 }
 const smooth = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -682,7 +820,7 @@ function updatePhoneCams(fullAspect) {
     C.world.copy(C.pos); truck.localToWorld(C.world);
     C.cam.position.copy(C.world);
     C.cam.lookAt(C.world.clone().add(C.dir));
-    C.cam.aspect = fullAspect && view === key ? innerWidth / innerHeight : 16 / 9;
+    C.cam.aspect = fullAspect && view === key && innerWidth / innerHeight >= 1.2 ? innerWidth / innerHeight : 16 / 9;
     C.cam.updateProjectionMatrix(); C.cam.updateMatrixWorld();
   }
 }
@@ -1077,11 +1215,15 @@ function kitInfoHtml() {
   return K.info + `<p style="margin:8px 0 4px"><b>Armado</b> · ${kitStep ? `paso ${kitStep} de ${K.steps.length}` : "usá «Paso a paso» para verlo pieza por pieza"}</p>
     <ol style="margin:0;padding-left:18px;font-size:13px">${K.steps.map((t, i) => `<li style="margin:3px 0;${kitStep === i + 1 ? "font-weight:600;color:var(--ink)" : kitStep ? "color:#9aa3ab" : "color:var(--muted)"}">${t}</li>`).join("")}</ol>`;
 }
+function kitCam(K) {
+  const off = innerWidth / innerHeight < .8 ? V3(-K.cam[1].x, 0, 0) : V3(0, 0, 0);
+  camPlace(K.cam[0].clone().add(off), K.cam[1].clone().add(off));
+}
 function setKit(key) {
   kitKey = key; kitStep = 0;
   for (const K of Object.values(KITS)) K.g.visible = K.key === key;
   document.querySelectorAll("[data-kit]").forEach(b => b.classList.toggle("on", b.dataset.kit === key));
-  const K = KITS[key]; camera.position.copy(K.cam[0]); controls.target.copy(K.cam[1]);
+  const K = KITS[key]; kitCam(K);
   document.getElementById("steps").textContent = "Paso a paso";
   if (mode === "kit") info.innerHTML = kitInfoHtml();
 }
@@ -1778,7 +1920,7 @@ function drawCamOverlay(g, key, rx, ry, rw, rh, stripY = ry + rh - 22, badgeY = 
   g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(rx, stripY, rw, 22);
   g.fillStyle = "#fff"; g.font = "11px ui-monospace,Menlo,monospace";
   g.fillText(full ? `FOTO ${C.count} · ${C.res} · DÍA ${S.day} ${hhmm()} · GPS ${LAT}, ${lonOf(S.x)} · ${(S.v * 3.6).toFixed(0)} km/h`
-    : `#${C.count} · ${hhmm()} · ${LAT}, ${lonOf(S.x)} · ${(S.v * 3.6).toFixed(0)} km/h`, rx + 24, stripY + 15);
+    : rw < 240 ? `#${C.count} · ${hhmm()} · ${(S.v * 3.6).toFixed(0)} km/h` : `#${C.count} · ${hhmm()} · ${LAT}, ${lonOf(S.x)} · ${(S.v * 3.6).toFixed(0)} km/h`, rx + 24, stripY + 15);
   g.fillStyle = C.flash > .3 ? "#ffffff" : "#ff4d4d";
   g.beginPath(); g.arc(rx + 12, stripY + 11, 5, 0, 7); g.fill();
   g.restore();
@@ -1802,8 +1944,8 @@ function setView(v) {
   view = v;
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === v));
   heatGroup.visible = v === "aerea";
-  if (v === "seguir") { camera.position.set(S.x - 10, 16, 17); controls.target.set(S.x + 3, .5, 3); }
-  if (v === "aerea") { camera.position.set(5, 85, 30); controls.target.set(5, 0, 2); }
+  if (v === "seguir") { camPlace(V3(S.x - 10, 16, 17), V3(S.x + 3, .5, 3)); }
+  if (v === "aerea") { camPlace(V3(5, 85, 30), V3(5, 0, 2)); }
   if (mode === "ruta") scene.fog = v === "aerea" ? null : FOG;
 }
 function setMode(m) {
@@ -1828,9 +1970,9 @@ function setMode(m) {
   if (ruta) setView(view);
   else heatGroup.visible = false;
   if (!ruta && !carga) { sun.position.set(8, 14, 10); sun.target.position.set(0, 0, 0); }
-  if (carga) { stepCargo(0); camera.position.set(CG.x - 13, 13, 17); controls.target.set(CG.x - .5, 1.5, 1.8); }
-  if (m === "kit") { const K = KITS[kitKey]; camera.position.copy(K.cam[0]); controls.target.copy(K.cam[1]); }
-  if (m === "sensores") { camera.position.set(7.5, 6.5, 12); controls.target.set(0, 3.2, 0); }
+  if (carga) { stepCargo(0); camPlace(V3(CG.x - 13, 13, 17), V3(CG.x - .5, 1.5, 1.8)); }
+  if (m === "kit") { const K = KITS[kitKey]; kitCam(K); }
+  if (m === "sensores") { camPlace(V3(7.5, 6.5, 12), V3(0, 3.2, 0)); }
 }
 document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
 document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
@@ -1875,19 +2017,108 @@ document.getElementById("glbFile").onchange = e => {
   }, undefined, err => toast("No se pudo abrir el modelo: " + err.message));
 };
 addEventListener("keydown", e => {
-  if (e.key === "h" || e.key === "H") document.body.classList.toggle("clean");
+  if (e.key === "h" || e.key === "H") { document.body.classList.toggle("clean"); layout(); }
   if (e.key === "p" || e.key === "P") document.getElementById("pip").click();
   if (e.key === "i" || e.key === "I") document.getElementById("ai").click();
   if (e.key === "x" || e.key === "X") document.getElementById(mode === "carga" ? "xray2" : "xray").click();
   if (e.code === "Space") { e.preventDefault(); document.getElementById("pause").click(); }
 });
-addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+let TOP = 118;
+function layout() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = camera.aspect < .8 ? 55 : 45;
+  camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+  const hb = document.querySelector("header").getBoundingClientRect();
+  TOP = Math.round((document.body.classList.contains("clean") ? 0 : hb.bottom) + 8);
+  document.documentElement.style.setProperty("--top", TOP + "px");
+}
+addEventListener("resize", layout);
+addEventListener("orientationchange", () => setTimeout(layout, 300));
 
 // gráfico de sensores (modo 3): gravedad vista desde el celular
 const GBUF = 200, gx = new Float32Array(GBUF), gy = new Float32Array(GBUF), gz = new Float32Array(GBUF);
 let gI = 0;
 const gravLocal = new THREE.Vector3(), invQ = new THREE.Quaternion();
 
+
+// =====================================================================
+// Bienvenida, tour guiado y hoja de datos (celular)
+// =====================================================================
+const welcome = document.getElementById("welcome"), tourEl = document.getElementById("tour");
+if (MOBILE) document.getElementById("touchHint").textContent = "Arrastrá con un dedo para girar · pellizcá para acercar · dos dedos para mover.";
+document.getElementById("help").textContent = "Arrastrar: girar · Rueda: zoom · Clic derecho: mover · H: ocultar paneles · X: rayos X · Espacio: pausa";
+function resetToggles() {
+  if (aiPreview) document.getElementById("ai").click();
+  if (xrayRuta) document.getElementById("xray").click();
+  if (xrayCarga) document.getElementById("xray2").click();
+  if (S.paused) document.getElementById("pause").click();
+  if (!pipOn) document.getElementById("pip").click();
+}
+// lleva el camión cerca de la base para no esperar todo el recorrido
+function jumpToBase() {
+  if (S.mode === "upload" || S.x > DEPOT_STOP - 30) return;
+  S.mode = "drive"; S.target = null; S.t = 0; compactOn = false; blade.rotation.z = 0;
+  S.x = DEPOT_STOP - 12; S.v = 4;
+}
+const TOUR = [
+  {title: "Un camión que ya pasa por todas las calles", text: "Este es un camión de basura de Trelew. Recorre todas las cuadras, todos los días. La idea es aprovechar ese recorrido para mirar la calle.",
+    go() { setMode("ruta"); setView("seguir"); }},
+  {title: "Tres celulares viejos, sin batería", text: "Uno mira la calle, para los baches. Los otros dos miran cada vereda, para la poda. Las ventanas muestran lo que ve cada uno: sacan una foto cada 2,5 m.",
+    go() { setMode("ruta"); setView("seguir"); camPlace(V3(S.x - 3, 9, 13), V3(S.x + 4, 1.5, 2)); }},
+  {title: "Lo que ve el celular de adelante", text: "La franja amarilla es la zona útil para ver un bache (de 4 a 9 m). Los recuadros son una vista previa: la inteligencia artificial no corre en el celular, sino en el servidor de la base.",
+    go() { setMode("ruta"); setView("front"); document.getElementById("ai").click(); }},
+  {title: "Cómo se alimentan", text: "Con rayos X se ve el cableado: de la batería del camión a un temporizador, de ahí a un regulador y a cada celular. Al apagar el motor siguen prendidos un rato para subir las fotos.",
+    go() { setMode("ruta"); setView("seguir"); document.getElementById("xray").click(); camPlace(V3(S.x + 2, 7, 9), V3(S.x + 1.5, 1.8, 1.8)); }},
+  {title: "En la base: Wi-Fi y servidor", text: "Al volver, los celulares suben las fotos por Wi-Fi. Un servidor las analiza, confirma cada objeto con 2 fotos o más y actualiza el mapa.",
+    go() { setMode("ruta"); setView("seguir"); jumpToBase(); }},
+  {title: "El mapa para el municipio", text: "Servicios Públicos ve cada bache y cada montón de poda: naranja si es nuevo, rojo si lleva 2 días o más, verde cuando se resolvió, con los días que tardó.",
+    go() { setMode("ruta"); setView("aerea"); }},
+  {title: "El kit, paso a paso", text: "Celulares donados, soportes, un regulador y un kit de cableado de dashcam. Tocá «Paso a paso» para ver cómo se instala cada pieza.",
+    go() { setMode("kit"); setKit("basura"); if (explodeTarget) document.getElementById("explode").click(); }},
+  {title: "También en camiones de carga", text: "Una cámara adelante marca posibles baches y dos celulares atrás, atornillados al chasis, los confirman con el golpe de la rueda o los descartan si era una mancha.",
+    go() { setMode("carga"); }},
+  {title: "Ahora explorá vos", text: "Es una simulación ilustrativa: los datos no son reales. Usá los botones de arriba para cambiar de vista. Equipo Sergio, Yael, Agustín e Ignacio · Sede Trelew.",
+    go() { setMode("ruta"); setView("seguir"); }}
+];
+let tourI = -1;
+const tourDots = document.getElementById("tourDots");
+tourDots.innerHTML = TOUR.map(() => "<i></i>").join("");
+function showTour(i) {
+  tourI = Math.max(0, Math.min(TOUR.length - 1, i));
+  resetToggles(); document.body.classList.remove("sheet"); document.body.classList.add("touring");
+  TOUR[tourI].go();
+  tourEl.style.display = "block";
+  document.getElementById("tourCount").textContent = `Tour guiado · ${tourI + 1} de ${TOUR.length}`;
+  document.getElementById("tourTitle").textContent = TOUR[tourI].title;
+  document.getElementById("tourText").textContent = TOUR[tourI].text;
+  document.getElementById("tourPrev").disabled = tourI === 0;
+  document.getElementById("tourNext").textContent = tourI === TOUR.length - 1 ? "Terminar" : "Siguiente →";
+  [...tourDots.children].forEach((d, k) => d.classList.toggle("on", k === tourI));
+}
+function endTour() { tourI = -1; tourEl.style.display = "none"; document.body.classList.remove("touring"); resetToggles(); }
+document.getElementById("tourNext").onclick = () => tourI >= TOUR.length - 1 ? endTour() : showTour(tourI + 1);
+document.getElementById("tourPrev").onclick = () => showTour(tourI - 1);
+document.getElementById("tourExit").onclick = endTour;
+document.getElementById("tourBtn").onclick = () => showTour(0);
+function closeWelcome() { welcome.style.display = "none"; }
+document.getElementById("startTour").onclick = () => { closeWelcome(); showTour(0); };
+document.getElementById("startFree").onclick = () => { closeWelcome(); endTour(); };
+document.getElementById("aboutBtn").onclick = () => { endTour(); welcome.style.display = "flex"; };
+welcome.addEventListener("click", e => { if (e.target === welcome && !document.getElementById("startFree").disabled) closeWelcome(); });
+addEventListener("keydown", e => {
+  if (welcome.style.display !== "none" && e.key === "Escape") closeWelcome();
+  if (tourI < 0) return;
+  if (e.key === "ArrowRight") document.getElementById("tourNext").click();
+  if (e.key === "ArrowLeft" && tourI > 0) showTour(tourI - 1);
+  if (e.key === "Escape") endTour();
+});
+// hoja de datos en el celular
+const sheetBtn = document.getElementById("sheetBtn");
+sheetBtn.onclick = () => { const on = document.body.classList.toggle("sheet"); sheetBtn.textContent = on ? "Ocultar ▾" : "Datos ▴"; };
+// al tocar un botón de la barra, la hoja se cierra para ver la escena
+document.querySelectorAll("header button").forEach(b => b.addEventListener("click", () => { document.body.classList.remove("sheet"); sheetBtn.textContent = "Datos ▴"; }));
+// atajo para el QR: ?tour abre directo el tour, ?libre salta la bienvenida
+const qs = new URLSearchParams(location.search);
 // =====================================================================
 // Bucle principal
 // =====================================================================
@@ -1904,7 +2135,7 @@ function loop() {
     if (!S.paused) step(dt * S.speed);
     const dx = S.x - lastTruckX;
     if (view === "seguir") {
-      if (Math.abs(dx) > 30) { camera.position.set(S.x - 10, 16, 17); controls.target.set(S.x + 3, .5, 3); }
+      if (Math.abs(dx) > 30) { camPlace(V3(S.x - 10, 16, 17), V3(S.x + 3, .5, 3)); }
       else { camera.position.x += dx; controls.target.x += dx; }
     }
     lastTruckX = S.x;
@@ -1980,7 +2211,7 @@ function loop() {
   if (mode === "carga") {
     const px = CG.x;
     stepCargo(dt);
-    if (Math.abs(CG.x - px) > 30) { camera.position.set(CG.x - 13, 13, 17); controls.target.set(CG.x - .5, 1.5, 1.8); }
+    if (Math.abs(CG.x - px) > 30) { camPlace(V3(CG.x - 13, 13, 17), V3(CG.x - .5, 1.5, 1.8)); }
     else { camera.position.x += CG.x - px; controls.target.x += CG.x - px; }
     sun.position.set(CG.x + 30, 55, 30); sun.target.position.set(CG.x, 0, 0);
     screenT += dt; if (screenT > .25) { screenT = 0; drawScreen(et, Math.floor(CG.simT * 2.8) * 6, LAT, lonOf(CG.x)); }
@@ -2003,7 +2234,14 @@ function loop() {
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, W, H);
   if (camView) setHelpers(false);
+  // en pantallas verticales la cámara del celular se muestra como franja 16:9, como la foto real
+  const band = camView && W / H < 1.2 ? Math.round(W * 9 / 16) : 0, bandY = Math.round((H - band) / 2);
+  if (band) {
+    renderer.setScissorTest(true); renderer.setScissor(0, 0, W, H); renderer.setClearColor(0x1d2329); renderer.clear();
+    renderer.setViewport(0, bandY, W, band); renderer.setScissor(0, bandY, W, band);
+  }
   renderer.render(scene, camView ? CAMS[view].cam : camera);
+  if (band) renderer.setScissorTest(false);
   setHelpers(true);
   // ventanas de los 3 celulares del camión de carga
   const showMos = mode === "carga" && mosOn;
@@ -2044,12 +2282,19 @@ function loop() {
     setHelpers(true);
   }
   const clean = document.body.classList.contains("clean");
-  if (camView) drawCamOverlay(g, view, 0, 0, W, H, clean ? H - 22 : 96, clean ? 6 : 126, true);
+  if (camView && band) drawCamOverlay(g, view, 0, bandY, W, band);
+  else if (camView) drawCamOverlay(g, view, 0, 0, W, H, clean ? H - 22 : TOP - 8, clean ? 6 : TOP + 22, true);
   labelLayer.style.display = camView ? "none" : "block";
   updateLabels(camera);
   if (ruta) { drawChart(); drawMini(); updateStats(); }
 }
+layout();
 loop();
+window.__ready = true;
+document.getElementById("loadMsg").style.display = "none";
+for (const id of ["startTour", "startFree"]) document.getElementById(id).disabled = false;
+if (qs.has("tour")) { closeWelcome(); showTour(0); }
+else if (qs.has("libre")) closeWelcome();
 </script>
 </body>
 </html>
