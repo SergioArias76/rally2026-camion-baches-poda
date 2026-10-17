@@ -78,10 +78,11 @@
   #toast{position:fixed;left:50%;top:126px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;display:none}
   body.clean header,body.clean aside,body.clean #miniwrap,body.clean #info,body.clean #help{display:none!important}
   body.clean #pips,body.clean #server{top:12px}
-  #mosaic{position:fixed;left:12px;top:118px;display:none;grid-template-columns:repeat(2,214px);gap:6px;pointer-events:none}
+  #mosaic{position:fixed;left:12px;top:118px;display:none;grid-template-columns:320px;gap:6px;pointer-events:none}
   #mosaic .cell{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:transparent}
   #mosaic .cell div:first-child{height:22px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--muted);background:var(--card);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #mosaic .mimg{height:120px}
+  #mosaic .mimg{height:180px}
+  @media (max-height:780px){#mosaic .mimg{height:130px}}
   #cargoPanel{display:none}
   #cargoChart{width:100%;height:120px;display:block;border:1px solid var(--line);border-radius:6px;background:#fff}
   #cargoPanel table{width:100%;border-collapse:collapse;font-size:12px}
@@ -128,7 +129,8 @@
   </div>
   <div class="btns" id="cargaBtns" style="display:none">
     <button id="xray2">Rayos X</button>
-    <button id="mos" class="on">Ventanas (6)</button>
+    <button id="mos" class="on">Ventanas</button>
+    <button id="tri" class="on">Triangulación</button>
   </div>
   <div class="btns" id="kitBtns" style="display:none">
     <button id="explode">Armar</button>
@@ -157,20 +159,19 @@
 <div id="miniwrap"><h2>Mapa del recorrido</h2><canvas id="mini"></canvas></div>
 <div id="mosaic"></div>
 <aside id="cargoPanel">
-  <h2>Acelerómetros: cabina y cola</h2>
+  <h2>Acelerómetros de los 3 celulares</h2>
   <canvas id="cargoChart"></canvas>
-  <div class="legend"><span><i style="background:#1f6feb"></i>Celulares de adelante (eje delantero)</span><span><i style="background:#8e44ad"></i>Celulares de atrás (ejes traseros)</span></div>
-  <p>El mismo bache golpea primero el eje de adelante y después los de atrás. Si la demora coincide con distancia entre ejes ÷ velocidad del GPS, es un bache confirmado y no un ruido de la cabina.</p>
+  <div class="legend"><span><i style="background:#1f6feb"></i>Adelante</span><span><i style="background:#8e44ad"></i>Atrás izq.</span><span><i style="background:#e67e22"></i>Atrás der.</span></div>
+  <p>Los 3 forman un triángulo. El golpe del bache llega primero adelante y después atrás: la demora, comparada con la velocidad del GPS, lo confirma. Atrás, el celular del lado de la rueda que cayó se sacude más: así se sabe de qué lado está.</p>
   <h2>Qué mide cada celular</h2>
   <table>
-    <tr><td>Adelante centro</td><td>Baches en el carril, de 4 a 9 m</td></tr>
-    <tr><td>Adelante der. e izq.</td><td>Las dos veredas, desde arriba de los vidrios laterales</td></tr>
-    <tr><td>Atrás centro</td><td>El mismo carril desde atrás: segunda foto de cada bache, con otra luz</td></tr>
-    <tr><td>Atrás der. e izq.</td><td>Las veredas desde el otro ángulo: lo que un auto tapa de frente, se ve de atrás</td></tr>
-    <tr><td>Los 6</td><td>GPS y acelerómetro: el golpe en la cabina y en la caja, con la carga real</td></tr>
+    <tr><td>Adelante</td><td>Baches en el carril (4 a 9 m) y las dos veredas a lo lejos</td></tr>
+    <tr><td>Atrás izq.</td><td>La vereda de enfrente en diagonal y el carril que queda atrás</td></tr>
+    <tr><td>Atrás der.</td><td>La vereda en diagonal y el carril que queda atrás</td></tr>
+    <tr><td>Los 3</td><td>Cada objeto se ve desde 3 lugares: al cruzar las líneas se ubica mejor que con el GPS solo, y lo que un auto tapa de frente se ve de atrás. Los dos de atrás ven el carril a la vez (estéreo) y estiman el ancho del bache</td></tr>
   </table>
   <p><b>Por qué van arriba:</b> ven por encima de los autos estacionados, el bache se ve menos aplastado y la lente no se ensucia con el polvo de las ruedas. Atrás van en el marco fijo, no en las puertas.</p>
-  <p>Con 6 celulares son ~22 GB por turno de ~40 km: por Wi-Fi tarda ~75 min, al límite del temporizador. Conviene Wi-Fi de 5 GHz en la base.</p>
+  <p>Con 3 celulares son ~11 GB por turno de ~40 km (adelante a 1920×1080, atrás a 1280×720): unos 40 min por Wi-Fi.</p>
   <h2>Registro</h2>
   <ul id="cargoLog" class="log"></ul>
 </aside>
@@ -978,7 +979,7 @@ for (const [html, obj, off] of [
 }
 
 // =====================================================================
-// Camión de carga con 6 celulares
+// Camión de carga con 3 celulares que triangulan
 // =====================================================================
 const cargo = new THREE.Group(); cargo.visible = false; scene.add(cargo);
 {
@@ -1003,7 +1004,7 @@ const cargo = new THREE.Group(); cargo.visible = false; scene.add(cargo);
   const cTex = textTex(1024, 200, (g, w, h) => {
     g.fillStyle = "#1f5fa8"; g.fillRect(0, 140, w, 60);
     g.fillStyle = "#1d2329"; g.font = "700 62px system-ui"; g.fillText("TRANSPORTE DE CARGA", 40, 90);
-    g.fillStyle = "#fff"; g.font = "600 36px system-ui"; g.fillText("Piloto · 6 celulares en desuso a bordo", 40, 183);
+    g.fillStyle = "#fff"; g.font = "600 36px system-ui"; g.fillText("Piloto · 3 celulares en desuso a bordo", 40, 183);
   });
   for (const s of [1, -1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.35), new THREE.MeshBasicMaterial({map: cTex, transparent: true})); pl.position.set(-1.85, 2.7, s * 1.285); if (s < 0) pl.rotation.y = Math.PI; cargo.add(pl); }
 }
@@ -1013,33 +1014,50 @@ for (const x of CARGO_AXLES) for (const z of [-1.1, 1.1]) {
   const w = new THREE.Mesh(wg, M(0x1d1d1f)); w.position.set(x, .55, z); cargo.add(w); cargoWheels.push(w);
   const h = new THREE.Mesh(hubG, grey); h.position.set(x, .55, z); cargo.add(h); cargoWheels.push(h);
 }
-// los 6 celulares: 3 en el parabrisas y 3 en la cola, dentro de carcasas estancas
+// 3 celulares en triángulo: uno arriba del parabrisas y dos en las esquinas de arriba de la cola.
+// Los de atrás miran en diagonal: cada uno su vereda, y los dos juntos el carril que queda atrás (estéreo).
 const CC = [
-  {key: "fc", name: "Adelante centro · baches", pos: V3(4.42, 3.45, 0), dir: V3(1, -.42, 0)},
-  // los de los costados, arriba en los vidrios laterales (no en las esquinas del parabrisas, que tienen el parante)
-  {key: "fl", name: "Adelante izquierda · vereda de enfrente", pos: V3(3.75, 3.45, -1.18), dir: V3(.35, -.3, -1)},
-  {key: "fr", name: "Adelante derecha · vereda", pos: V3(3.75, 3.45, 1.18), dir: V3(.35, -.5, 1)},
-  // los de atrás, colgados del marco fijo de arriba: no de las puertas, que se abren para cargar
-  {key: "rc", name: "Atrás centro · baches, 2.ª foto", pos: V3(-5.86, 3.6, 0), dir: V3(-1, -.5, 0), rear: true},
-  {key: "rl", name: "Atrás izquierda · vereda de enfrente", pos: V3(-5.86, 3.6, -1.0), dir: V3(-.55, -.3, -1), rear: true},
-  {key: "rr", name: "Atrás derecha · vereda", pos: V3(-5.86, 3.6, 1.0), dir: V3(-.55, -.5, 1), rear: true}
+  {key: "fc", name: "Adelante · baches y las dos veredas a lo lejos", short: "Adelante", col: 0x1f6feb, pos: V3(4.42, 3.45, 0), dir: V3(1, -.42, 0), res: "1920 × 1080"},
+  // atrás: colgados del marco fijo, no de las puertas, que se abren para cargar
+  {key: "rl", name: "Atrás izquierda · vereda de enfrente y carril", short: "Atrás izquierda", col: 0x8e44ad, pos: V3(-5.9, 3.55, -1.05), dir: V3(-1, -.42, -.6), rear: true, res: "1280 × 720"},
+  {key: "rr", name: "Atrás derecha · vereda y carril", short: "Atrás derecha", col: 0xe67e22, pos: V3(-5.9, 3.55, 1.05), dir: V3(-1, -.42, .6), rear: true, res: "1280 × 720"}
 ];
-const cargoHelpers = [], cargoPhones = [];
+const cargoHelpers = [], cargoPhones = [], housings = [];
 const frusMat = new THREE.LineBasicMaterial({color: 0xd4a514, transparent: true, opacity: .75});
 const frusFill = new THREE.MeshBasicMaterial({color: 0xf2c230, transparent: true, opacity: .14, side: THREE.DoubleSide, depthWrite: false});
 const tmpCam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
+// carcasa estanca para los celulares que van afuera
+function makeHousing() {
+  const h = new THREE.Group(), body = M(0xeceff1, {roughness: .5}), rubber = M(0x1b1c1f, {roughness: .9});
+  // cuerpo blanco (refleja el sol), abierto adelante; el celular queda adentro
+  h.add(box(1.04, .06, .26, body, 0, .29, .07), box(1.04, .06, .26, body, 0, -.29, .07));
+  h.add(box(.06, .58, .26, body, -.52, 0, .07), box(.06, .58, .26, body, .52, 0, .07));
+  h.add(box(1.04, .58, .05, body, 0, 0, .2));
+  // ventana de policarbonato con junta de goma
+  h.add(box(.96, .5, .015, new THREE.MeshStandardMaterial({color: 0xcfe6f5, roughness: .05, metalness: .1, transparent: true, opacity: .28}), 0, 0, -.06));
+  for (const [w, hh, x, y] of [[1.0, .035, 0, .265], [1.0, .035, 0, -.265], [.035, .5, -.49, 0], [.035, .5, .49, 0]]) h.add(box(w, hh, .03, rubber, x, y, -.065));
+  // visera contra sol y lluvia, con alas a los costados
+  const vis = box(1.14, .03, .3, M(0xe4e7ea, {roughness: .5}), 0, .32, -.17); vis.rotation.x = -.12; h.add(vis);
+  for (const x of [-.56, .56]) h.add(box(.025, .2, .28, M(0xe4e7ea, {roughness: .5}), x, .22, -.15));
+  // prensacable abajo (el agua no entra por el cable) y membrana de venteo para que no se empañe
+  const gland = cyl(.045, .055, .09, rubber, 12); gland.position.set(.3, -.35, .1); h.add(gland);
+  const vent = cyl(.035, .035, .015, M(0x9aa0a6), 12); vent.rotation.x = Math.PI / 2; vent.position.set(-.35, -.18, .23); h.add(vent);
+  // tacos de goma antivibración entre la carcasa y el marco
+  for (const x of [-.32, .32]) { const t = cyl(.045, .045, .07, rubber, 10); t.position.set(x, .36, .08); h.add(t); }
+  return h;
+}
 for (const c of CC) {
   c.dir.normalize();
+  const flat = V3(c.dir.x, 0, c.dir.z).normalize(), pitch = -Math.asin(-c.dir.y);
   const ph = makePhone(.42, .86, .05, true);
-  ph.quaternion.setFromUnitVectors(V3(0, 0, -1), V3(c.dir.x, 0, c.dir.z).normalize());
-  ph.rotateX(-Math.asin(-c.dir.y)); ph.rotateZ(Math.PI / 2);
+  ph.quaternion.setFromUnitVectors(V3(0, 0, -1), flat);
+  ph.rotateX(pitch); ph.rotateZ(Math.PI / 2);
   ph.position.copy(c.pos); cargo.add(ph); cargoPhones.push(ph);
-  if (c.rear) { // carcasa estanca naranja con visera
-    const h = new THREE.Group();
-    h.add(box(.06, .56, .98, M(0xe0672b, {roughness: .6}), .12, 0, 0));
-    h.add(box(.32, .05, 1.0, M(0xe0672b, {roughness: .6}), -.04, .3, 0));
-    h.add(box(.06, .1, .06, M(0x5d6166), .08, .34, 0));   // soporte al marco
-    h.position.copy(c.pos); cargo.add(h);
+  if (c.rear) {
+    const h = makeHousing();
+    h.quaternion.setFromUnitVectors(V3(0, 0, -1), flat); h.rotateX(pitch);
+    h.position.copy(c.pos); cargo.add(h); housings.push(h);
+    cargo.add(box(.1, .16, .1, M(0x5d6166, {metalness: .5}), c.pos.x + .05, 3.86, c.pos.z)); // escuadra al marco
   } else cargo.add(box(.08, .2, .08, dark, c.pos.x, 3.7, c.pos.z));
   c.cam = new THREE.PerspectiveCamera(43, 16 / 9, .6, 140);
   c.world = new THREE.Vector3();
@@ -1054,16 +1072,18 @@ for (const c of CC) {
   const lines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([...pts.flatMap(q => [c.pos, q]), pts[0], pts[1], pts[1], pts[2], pts[2], pts[3], pts[3], pts[0]]), frusMat);
   const fill = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]]), frusFill);
   cargo.add(lines, fill); cargoHelpers.push(lines, fill);
-  c.label = makeLabel(`<b>${c.name.split(" · ")[0]}</b>`, ""); c.label.obj = ph;
-  c.label.offset.set(c.rear ? -.3 : .3, .55, c.pos.z * .5);
+  c.label = makeLabel(`<b>${c.short}</b>${c.rear ? " · carcasa estanca" : ""}`, ""); c.label.obj = ph;
+  c.label.offset.set(c.rear ? -.3 : .3, .65, c.pos.z * .4);
 }
-const cargoMarkers = {chassis: new THREE.Object3D(), rearBox: null};
+const housingLabel = makeLabel("<b>Carcasa estanca de los celulares de afuera</b><small>Blanca, para que no calienten · ventana de policarbonato con junta de goma · visera contra sol y lluvia · prensacable abajo · membrana para que no se empañe · tacos de goma contra la vibración. Sin batería, el calor no la hincha</small>", "big");
+housingLabel.obj = housings[1]; housingLabel.offset.set(-.6, -.7, 1.5); housingLabel.visible = false;
+const cargoMarkers = {chassis: new THREE.Object3D()};
 const cargoWiring = buildWiring(cargo, [
   {mesh: wBattery("24"), pos: V3(.9, .62, -1.2), html: "<b>Baterías del camión · 24 V</b><small>Un fusible a la salida protege todo el kit</small>", off: V3(.4, .3, -1.0)},
-  {mesh: wBox(.22, .16, .3, 0x8a9199), pos: V3(3.25, 2.25, -.95), html: "<b>Contacto (ACC)</b><small>Prende los 6 celulares al dar arranque</small>", off: V3(-.3, .9, -1.4)},
+  {mesh: wBox(.22, .16, .3, 0x8a9199), pos: V3(3.25, 2.25, -.95), html: "<b>Contacto (ACC)</b><small>Prende los 3 celulares al dar arranque</small>", off: V3(-.3, .9, -1.4)},
   {mesh: wBox(.32, .16, .26, 0x16181b, 0x2ecc71), pos: V3(3.7, 2.45, -.55), html: "<b>Kit de dashcam con temporizador</b><small>60–90 min más en la base para subir las fotos; corta si la batería baja</small>", off: V3(.6, 1.5, -1.1)},
-  {mesh: wBox(.36, .14, .3, 0x1f4f8b), pos: V3(3.7, 2.45, .35), html: "<b>Regulador de la cabina</b><small>24 V → 4 V, 3 salidas para los celulares de adelante</small>", off: V3(.6, 1.5, 1.1)},
-  {mesh: wBox(.5, .4, .6, 0xe0672b), pos: V3(-5.35, 1.05, 0), html: "<b>Caja estanca en la cola</b><small>Regulador 24 V → 4 V, 3 salidas para los celulares de atrás</small>", off: V3(-.2, .5, 0)},
+  {mesh: wBox(.3, .14, .26, 0x1f4f8b), pos: V3(3.7, 2.45, .35), html: "<b>Regulador de la cabina</b><small>24 V → 4 V para el celular de adelante</small>", off: V3(.6, 1.5, 1.1)},
+  {mesh: wBox(.5, .4, .6, 0xe0672b), pos: V3(-5.35, 1.05, 0), html: "<b>Caja estanca en la cola</b><small>Regulador 24 V → 4 V con 2 salidas, para los celulares de atrás</small>", off: V3(-.2, .5, 0)},
   {mesh: cargoMarkers.chassis, pos: V3(-1.2, .95, -.55), html: "<b>Cable por el chasis · ~9 m</b><small>Sujeto al larguero con precintos y en caño corrugado, lejos del escape</small>", off: V3(0, .3, -.6)}
 ], [
   {col: WIRE.batt, rad: .04, pts: [V3(.9, .9, -1.2), V3(1.6, 1.0, -1.1), V3(2.8, 1.3, -.95), V3(3.5, 2.1, -.7), V3(3.7, 2.45, -.55)]},
@@ -1072,15 +1092,51 @@ const cargoWiring = buildWiring(cargo, [
   {col: WIRE.timed, pts: [V3(3.7, 2.45, -.55), V3(3.75, 2.5, -.1), V3(3.7, 2.45, .35)], n: 2},
   {col: WIRE.timed, rad: .035, n: 6, sp: .25, pts: [V3(3.7, 2.4, -.55), V3(3.2, 1.6, -.6), V3(2.4, 1.0, -.55), V3(0, .98, -.55), V3(-3, .98, -.55), V3(-4.9, .98, -.55), V3(-5.35, 1.05, -.2)]},
   {col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.3, 2.6, 0), V3(4.42, 3.6, 0), V3(4.42, 3.7, 0), V3(4.42, 3.55, 0)]},
-  ...[-1, 1].map(s => ({col: WIRE.usb, rad: .022, pts: [V3(3.7, 2.5, .35), V3(4.0, 2.6, s), V3(4.1, 3.6, s * 1.2), V3(3.8, 3.72, s * 1.18), V3(3.75, 3.6, s * 1.18)]})),
-  // atrás: el cable sube por el parante fijo y sigue por el marco, nunca por la puerta
-  ...[0, -1.0, 1.0].map(z => { const s = z < 0 ? -1 : 1; return {col: WIRE.usb, rad: .022, pts: [V3(-5.35, 1.25, 0), V3(-5.74, 1.45, 1.2 * s), V3(-5.78, 3.7, 1.2 * s), V3(-5.8, 3.86, (1.2 * s + z) / 2), V3(-5.84, 3.75, z)]}; })
+  // atrás: sube por el parante fijo y entra a la carcasa por el prensacable de abajo
+  ...[-1, 1].map(s => ({col: WIRE.usb, rad: .022, pts: [V3(-5.35, 1.25, 0), V3(-5.74, 1.45, 1.2 * s), V3(-5.78, 3.0, 1.2 * s), V3(-5.86, 3.15, 1.12 * s), V3(-5.9, 3.2, 1.0 * s)]}))
 ]);
 const cargoX = prepXray(cargo, [cargoWiring.g, ...cargoPhones, ...cargoHelpers]);
 let xrayCarga = false;
-// recorrido del camión de carga y sus dos acelerómetros
-const CG = {x: -70, v: 7, simT: 0, bumpF: 0, bumpR: 0, hits: new Map()};
-const CBUF = 300, accCF = new Float32Array(CBUF), accCR = new Float32Array(CBUF);
+// triangulación: cada objeto se ve desde el celular de adelante (al acercarse) y desde los de atrás (al alejarse)
+const TRI_MAX = 4;
+const triGeo = new THREE.BufferGeometry();
+triGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(TRI_MAX * 3 * 2 * 3), 3));
+triGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(TRI_MAX * 3 * 2 * 3), 3));
+const triLines = new THREE.LineSegments(triGeo, new THREE.LineBasicMaterial({vertexColors: true, transparent: true, opacity: .95, depthTest: false}));
+triLines.renderOrder = 5; triLines.frustumCulled = false; scene.add(triLines);
+const triDots = [];
+for (let i = 0; i < TRI_MAX * 3; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), new THREE.MeshBasicMaterial({color: 0xffffff, depthTest: false})); d.renderOrder = 6; d.visible = false; scene.add(d); triDots.push(d); }
+const triLbls = Array.from({length: TRI_MAX}, () => { const l = makeLabel("", "zone"); l.visible = false; return l; });
+let triOn = true;
+const camSees = (c, o) => o.home.distanceTo(c.world) < 16 && projectBox(o, c.cam);
+function updateTri() {
+  const pos = triGeo.attributes.position.array, col = triGeo.attributes.color.array;
+  let n = 0, k = 0;
+  triLbls.forEach(l => l.visible = false); triDots.forEach(d => d.visible = false);
+  for (const o of OBJS) {
+    if (!present(o)) continue;
+    if (camSees(CC[0], o)) o.cgFront = CC[0].world.clone();           // la última vez que lo vio el de adelante
+    const rear = CC.slice(1).filter(c => camSees(c, o));
+    if (!triOn || !o.cgFront || !rear.length || n >= TRI_MAX) continue;
+    const tgt = o.home.clone().add(V3(0, o.kind === "hole" ? .05 : .6, 0));
+    const rays = [[o.cgFront, CC[0].col], ...rear.map(c => [c.world, c.col])];
+    for (const [from, c] of rays) {
+      const cc = new THREE.Color(c);
+      for (const q of [from, tgt]) { pos.set([q.x, q.y, q.z], k * 3); col.set([cc.r, cc.g, cc.b], k * 3); k++; }
+    }
+    triDots[n * 3].position.copy(o.cgFront); triDots[n * 3].visible = true;
+    const l = triLbls[n]; l.visible = true; l.obj = null; l.pos = o.home; l.offset.set(0, o.kind === "hole" ? 1.2 : 2.4, 0);
+    const stereo = rear.length === 2 && o.kind === "hole";
+    l.el.innerHTML = `<b>${TYPES[o.type].name}</b> · ${rays.length} vistas: ubicado por triangulación${stereo ? ` · estéreo: ancho ≈ ${coma((o.r * 2.6).toFixed(1))} m` : ""}`;
+    n++;
+  }
+  for (let i = k; i < TRI_MAX * 6; i++) pos.set([0, -50, 0], i * 3);
+  triGeo.attributes.position.needsUpdate = true; triGeo.attributes.color.needsUpdate = true;
+  triGeo.setDrawRange(0, k);
+}
+// recorrido del camión de carga y los acelerómetros de los 3 celulares
+const CG = {x: -70, v: 7, simT: 0, bF: 0, bL: 0, bR: 0, hits: new Map()};
+const CBUF = 300, accCF = new Float32Array(CBUF), accRL = new Float32Array(CBUF), accRR = new Float32Array(CBUF);
 let cI = 0, cAcc = 0;
 const cargoLogEl = document.getElementById("cargoLog");
 const cclock = () => { const m = 9 * 60 + Math.floor(CG.simT); return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
@@ -1091,43 +1147,48 @@ function cargoLog(html) {
 function stepCargo(dt) {
   const prevX = CG.x;
   CG.simT += dt; CG.x += CG.v * dt;
-  if (CG.x > 88) { CG.x = -88; CG.hits.clear(); }
+  if (CG.x > 88) { CG.x = -88; CG.hits.clear(); for (const o of OBJS) o.cgFront = null; }
   cargo.position.set(CG.x, 0, ROAD_Z);
   for (const w of cargoWheels) w.rotation.z -= CG.v * dt / .55;
   if (CG.x > prevX) for (const o of OBJS) {
     if (o.kind !== "hole" || !present(o)) continue;
-    if (!(Math.abs(ROAD_Z + 1.1 - o.z) < o.r * 1.1 || Math.abs(ROAD_Z - 1.1 - o.z) < o.r * 1.1)) continue;
+    const right = Math.abs(ROAD_Z + 1.1 - o.z) < o.r * 1.1, left = Math.abs(ROAD_Z - 1.1 - o.z) < o.r * 1.1;
+    if (!right && !left) continue;
     CARGO_AXLES.forEach((ax, i) => {
       if (!(prevX + ax < o.x && CG.x + ax >= o.x)) return;
       if (i === 0) {
-        CG.bumpF = .5; CG.hits.set(o, CG.simT);
-        cargoLog(`<em>${cclock()} ·</em> Celulares de adelante: <b>golpe</b> en el carril · GPS ${LAT}, ${lonOf(o.x)}`);
-      } else {
-        CG.bumpR = .45;
-        if (i === 1 && CG.hits.has(o)) {
-          const dtv = CG.simT - CG.hits.get(o), base = CARGO_AXLES[0] - CARGO_AXLES[1];
-          cargoLog(`<em>${cclock()} ·</em> Celulares de atrás: el golpe llega <b>${coma(dtv.toFixed(2))} s</b> después. ${coma(base.toFixed(1))} m ÷ ${coma(dtv.toFixed(2))} s = <b>${Math.round(base / dtv * 3.6)} km/h</b>; el GPS marca ${Math.round(CG.v * 3.6)} km/h. Coinciden: <b>bache confirmado</b>`);
-        }
+        CG.bF = .45; CG.hits.set(o, CG.simT);
+        cargoLog(`<em>${cclock()} ·</em> Celular de adelante: <b>golpe</b> en el carril · GPS ${LAT}, ${lonOf(o.x)}`);
+        return;
+      }
+      // la rueda que cae sacude más al celular de su lado
+      const gL = right ? .2 : .5, gR = right ? .5 : .2;
+      CG.bL = gL; CG.bR = gR;
+      if (i === 1 && CG.hits.has(o)) {
+        const dtv = CG.simT - CG.hits.get(o), base = CARGO_AXLES[0] - CARGO_AXLES[1];
+        cargoLog(`<em>${cclock()} ·</em> Atrás: izq. ${coma(gL.toFixed(1))} g · der. ${coma(gR.toFixed(1))} g → cayó la <b>rueda ${right ? "derecha" : "izquierda"}</b>. Llega ${coma(dtv.toFixed(2))} s después: ${coma(base.toFixed(1))} m ÷ ${coma(dtv.toFixed(2))} s = <b>${Math.round(base / dtv * 3.6)} km/h</b>; el GPS marca ${Math.round(CG.v * 3.6)}. <b>Bache confirmado</b>`);
       }
     });
   }
   cAcc += dt;
   while (cAcc > 1 / 30) {
     cAcc -= 1 / 30;
-    const n = () => gauss() * .035;
-    accCF[cI] = n() + (CG.bumpF > .02 ? CG.bumpF * (cI % 2 ? 1 : -.8) : 0);
-    accCR[cI] = n() * 1.4 + (CG.bumpR > .02 ? CG.bumpR * (cI % 2 ? -1 : .8) : 0);
-    CG.bumpF *= .55; CG.bumpR *= .55; cI = (cI + 1) % CBUF;
+    const n = () => gauss() * .035, sg = cI % 2 ? 1 : -.8;
+    accCF[cI] = n() + (CG.bF > .02 ? CG.bF * sg : 0);
+    accRL[cI] = n() * 1.3 + (CG.bL > .02 ? CG.bL * -sg : 0);
+    accRR[cI] = n() * 1.3 + (CG.bR > .02 ? CG.bR * -sg : 0);
+    CG.bF *= .55; CG.bL *= .55; CG.bR *= .55; cI = (cI + 1) % CBUF;
   }
   cargo.updateMatrixWorld();
   for (const c of CC) {
     c.world.copy(c.pos); cargo.localToWorld(c.world);
     c.cam.position.copy(c.world); c.cam.lookAt(c.world.clone().add(c.dir)); c.cam.updateMatrixWorld();
   }
+  updateTri();
 }
-// ventanas de los 6 celulares
+// ventanas de los 3 celulares
 const mosaic = document.getElementById("mosaic");
-mosaic.innerHTML = CC.map(c => `<div class="cell"><div>${c.name}</div><div class="mimg" data-k="${c.key}"></div></div>`).join("");
+mosaic.innerHTML = CC.map(c => `<div class="cell"><div>${c.name} · ${c.res}</div><div class="mimg" data-k="${c.key}"></div></div>`).join("");
 let mosOn = true;
 
 // sombras: todo proyecta y recibe, salvo lo transparente, lo plano y el horizonte
@@ -1608,6 +1669,7 @@ document.getElementById("ai").onclick = e => { aiPreview = !aiPreview; e.target.
 document.getElementById("xray").onclick = e => { xrayRuta = !xrayRuta; e.target.classList.toggle("on", xrayRuta); applyXray(garbageX, xrayRuta); };
 document.getElementById("xray2").onclick = e => { xrayCarga = !xrayCarga; e.target.classList.toggle("on", xrayCarga); applyXray(cargoX, xrayCarga); };
 document.getElementById("mos").onclick = e => { mosOn = !mosOn; e.target.classList.toggle("on", mosOn); };
+document.getElementById("tri").onclick = e => { triOn = !triOn; e.target.classList.toggle("on", triOn); };
 document.getElementById("pause").onclick = e => { S.paused = !S.paused; e.target.textContent = S.paused ? "Seguir" : "Pausa"; e.target.classList.toggle("on", S.paused); };
 document.getElementById("speed").onclick = e => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? .5 : 1; e.target.textContent = `${coma(S.speed)}x`; };
 document.getElementById("csv").onclick = () => {
@@ -1726,6 +1788,9 @@ function loop() {
   garbageWiring.set(xrayRuta && mode === "ruta" && view !== "aerea", camera.position.distanceTo(truck.position) < 16); garbageWiring.tick(dt);
   cargoWiring.set(xrayCarga && mode === "carga", camera.position.distanceTo(cargo.position) < 19); cargoWiring.tick(dt);
   for (const c of CC) c.label.visible = mode === "carga" && !xrayCarga;
+  housingLabel.visible = mode === "carga" && camera.position.distanceTo(housings[1].getWorldPosition(tmpV)) < 9;
+  triLines.visible = mode === "carga";
+  if (mode !== "carga") { triLbls.forEach(l => l.visible = false); triDots.forEach(d => d.visible = false); }
   if (mode === "carga") {
     const px = CG.x;
     stepCargo(dt);
@@ -1734,7 +1799,7 @@ function loop() {
     sun.position.set(CG.x + 30, 55, 30); sun.target.position.set(CG.x, 0, 0);
     screenT += dt; if (screenT > .25) { screenT = 0; drawScreen(et, Math.floor(CG.simT * 2.8) * 6, LAT, lonOf(CG.x)); }
     const [gc, wc, hc] = fitCanvas(document.getElementById("cargoChart"));
-    drawLines(gc, wc, hc, [[accCR, "#8e44ad", cI], [accCF, "#1f6feb", cI]], .6);
+    drawLines(gc, wc, hc, [[accRL, "#8e44ad", cI], [accRR, "#e67e22", cI], [accCF, "#1f6feb", cI]], .6);
     gc.fillStyle = "#8a959e"; gc.font = "10px system-ui"; gc.fillText("+0,6 g", 3, 11); gc.fillText("−0,6 g", 3, hc - 3);
   }
   if (mode === "sensores") {
@@ -1754,11 +1819,11 @@ function loop() {
   if (camView) setHelpers(false);
   renderer.render(scene, camView ? CAMS[view].cam : camera);
   setHelpers(true);
-  // ventanas de los 6 celulares del camión de carga
+  // ventanas de los 3 celulares del camión de carga
   const showMos = mode === "carga" && mosOn;
   mosaic.style.display = showMos ? "grid" : "none";
   if (showMos) {
-    const hide = [...cargoHelpers, ...cargoPhones, cargoWiring.g], was = hide.map(o => o.visible);
+    const hide = [...cargoHelpers, ...cargoPhones, cargoWiring.g, triLines, ...triDots], was = hide.map(o => o.visible);
     hide.forEach(o => o.visible = false);
     for (const el of mosaic.querySelectorAll(".mimg")) {
       const r = el.getBoundingClientRect(), c = CC.find(q => q.key === el.dataset.k);
